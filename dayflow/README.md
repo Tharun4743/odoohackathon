@@ -1,4 +1,4 @@
-# Dayflow HRMS 🏢
+# Work Suite HRMS 🏢
 
 > **"Every workday, perfectly aligned."**  
 > A complete, production-quality Human Resource Management System built for the Odoo Hackathon.
@@ -7,10 +7,10 @@
 
 ## 🌟 Core Modules & Architecture Features
 
-### 1. Controlled User Provisioning (Self-Registration Disabled)
-- **HR/Admin Provisioning Only**: Normal employee self-registration is disabled. Employee accounts and IDs (`EMP-xxx`) are created exclusively by HR Officers or Administrators.
+### 1. Controlled User Provisioning & 2-Step OTP Password Reset
+- **HR/Admin Provisioning Only**: Normal employee self-registration is disabled (403 Forbidden). Employee accounts and IDs (`EMP-xxx`) are created exclusively by HR Officers or Administrators.
 - **Automated Initial Password Generation**: The system creates a secure initial password upon employee registration by HR and displays a one-click credential card (`Employee Code`, `Email`, `Initial Password`, `Role`) for easy sharing.
-- **Mandatory Password Change**: Employee logs in using the generated initial password and can update it anytime via the **Change Password** option in the profile avatar dropdown.
+- **2-Step Forgot Password Flow**: Secure 6-digit numeric OTP generation (15-minute expiry) dispatched via **Brevo HTTPS REST API (Port 443 for Render deployment)**.
 
 ### 2. Live Employee Status Cards (HR/Admin Command Center)
 - **Real-Time Work Status Matrix**: The HR/Admin Dashboard displays visual cards for all active employees with live status badges:
@@ -20,65 +20,60 @@
 - **Interactive Filters & Search**: Filter instantly by *All*, *Present*, *On Leave*, or *Absent*, with real-time text search.
 
 ### 3. Detailed Attendance & Break Management
-- **Ongoing Month Day-Wise View**: Employee attendance dashboard displays the current/ongoing month day-by-day by default with month-switching support.
+- **Ongoing Month Day-Wise View**: Employee attendance dashboard displays the current/ongoing month day-by-day by default with historical month-switching support.
 - **Break Time Tracking**: Dedicated *Start Break* and *End Break* workflows calculate total break duration and adjust net working hours: `Net Work Hours = Total Time - Break Duration`.
-- **HR Live Present View**: HR Officers can see who is checked in, on break, or completed their shift in real-time.
+- **Shift Evaluation**: `PRESENT` ($\ge 7\text{h}$), `HALF_DAY` ($4\text{h}-7\text{h}$), `ABSENT` ($< 4\text{h}$).
 
-### 4. Attendance-Driven Payroll & Payslips
+### 4. Attendance-Driven Payroll & Vector PDF Payslips
 - **Direct Attendance Calculation**: System determines `Payable Days` directly from verified attendance logs and approved time-off:
-  - `Payable Days = Present Days + (Half Days × 0.5) + Approved Paid Time Off`
-  - `Absent Days = Total Days in Month - Payable Days - Unpaid Time Off`
-  - `Pro-Rated Gross = (Base Gross / Total Days) × Payable Days`
-  - `Net Salary = Pro-Rated Gross - Standard Deductions`
-- **Transparent Payslip Generation**: Payslips and exported PDFs (`jsPDF` + `html2canvas`) display full attendance inputs (`Total Days`, `Present Days`, `Paid Time Off`, `Unpaid/Absent Days`, `Payable Days`).
+  $$\text{Payable Days} = \text{Present Days} + (\text{Half Days} \times 0.5) + \text{Approved Paid Time Off}$$
+  $$\text{Absent Days} = \text{Total Days in Month} - \text{Payable Days} - \text{Unpaid Time Off}$$
+  $$\text{Pro-Rated Gross} = \left(\frac{\text{Base Gross}}{\text{Total Days}}\right) \times \text{Payable Days}$$
+  $$\text{Net Salary} = \text{Pro-Rated Gross} - \text{Standard Deductions}$$
+- **Vector PDF Engine (`jsPDF`)**: Generates high-DPI official payslips with standard ASCII currency formatting (`Rs.`), complete attendance metrics, and print support.
 
-### 5. Profile Avatar Navigation & Dropdown
-- Clicking the user profile avatar in the top navigation bar opens a menu with:
-  1. **My Profile** (View & edit personal info, upload avatar, manage documents)
-  2. **Change Password** (Interactive modal to update password)
-  3. **Log Out** (Terminates session & clears JWT token)
+### 5. Profile & Cloudinary Document Management
+- **Avatar Upload**: Auto-cropped `300x300` square avatars stored on Cloudinary (`worksuite/profiles`).
+- **Verified Document Repository**: ID proofs, address proofs, and educational certificates stored on Cloudinary (`worksuite/documents/{id}`) with direct view and delete actions.
 
-### 6. Time-Off Workflow & Terminology
-- Standardized to **Time Off / Time Off Type Requests**:
-  - `Paid Time Off` (Full pay compensation)
-  - `Sick Time Off` (Medical / health)
-  - `Unpaid Time Off` (Reduces payable days in payroll computation)
-- HR approval/rejection modal with review notes directly syncs into attendance logs and payroll calculations.
+### 6. Time-Off Workflow & Analytics
+- Multi-type requests: `Paid Time Off`, `Sick Time Off`, `Unpaid Time Off`.
+- Interactive Recharts analytics dashboards: Headcount, monthly payroll costs, attendance trends, and leave distribution.
 
 ---
 
 ## 🚀 Tech Stack
 
 ### Frontend
-- **React 18** + **TypeScript** + **Vite**
-- **Tailwind CSS v4** + Modern Design System
+- **React 19** + **TypeScript** + **Vite**
+- **Tailwind CSS v4** + Design System (Stone Palette)
+- **Google Fonts**: Plus Jakarta Sans & Inter
 - **React Router v7** with Protected & Role-based Guards
-- **Axios** with global interceptors
 - **Recharts** for charts & analytics
-- **jsPDF** + **html2canvas** for PDF salary slip & report export
+- **jsPDF** for vector salary slips & reports
 - **Lucide Icons** & **React Hot Toast**
 
 ### Backend
-- **Node.js** + **Express** + **TypeScript**
-- **PostgreSQL / Supabase** with PG pool connection
-- **Brevo SMTP** for transactional notifications
+- **Node.js** + **Express 5** + **TypeScript**
+- **PostgreSQL / Supabase** (Port 6543 pooler)
+- **Brevo HTTPS REST API (Port 443)** for transactional emails & OTPs
+- **Cloudinary SDK** for secure document and avatar storage
 - **JSON Web Tokens (JWT)** + **bcryptjs** (12 salt rounds)
-- **Cloudinary SDK** + **Multer** for avatars and documents
 
 ---
 
 ## 🔑 Team Accounts & Roles
 
-| # | Name | Email | Password | Role | Employee Code |
-| :-: | :--- | :--- | :--- | :--- | :--- |
-| **1** | **THARUNKUMAR K** | `tharunkumark42007@gmail.com` | `Admin@123` | `ADMIN` (Lead Administrator) | `EMP-001` |
-| **2** | **SANJAY S** | `sanjayselvakumar05@gmail.com` | `Hr@123` | `HR` (HR Officer & People Ops) | `EMP-002` |
-| **3** | **RAMKISHORE S M** | `ramkishoresm@gmail.com` | `Employee@123` | `EMPLOYEE` (Senior Software Engineer) | `EMP-003` |
-| **4** | **SANTHOSHKUMAR S** | `writetokumarsanthosh@gmail.com` | `Employee@123` | `EMPLOYEE` (Full Stack & Analytics Lead) | `EMP-004` |
+| # | Name | Email | Role | Employee Code |
+| :-: | :--- | :--- | :--- | :--- |
+| **1** | **THARUNKUMAR K** | `tharunkumark42007@gmail.com` | `ADMIN` (Lead Administrator) | `EMP-001` |
+| **2** | **SANJAY S** | `sanjayselvakumar05@gmail.com` | `HR` (HR Officer & People Ops) | `EMP-002` |
+| **3** | **RAMKISHORE S M** | `ramkishoresm@gmail.com` | `EMPLOYEE` (Senior Software Engineer) | `EMP-003` |
+| **4** | **SANTHOSHKUMAR S** | `writetokumarsanthosh@gmail.com` | `EMPLOYEE` (Full Stack & Analytics Lead) | `EMP-004` |
 
 ---
 
-## 🛠️ Getting Started
+## 🛠️ Local Development
 
 ### 1. Database Initialization
 ```bash
@@ -87,18 +82,34 @@ npm run migrate  # Executes database/schema.sql on Supabase
 npm run seed     # Seeds the 4 team members
 ```
 
-### 2. Starting the Application
-
-#### Start Server:
+### 2. Running Locally
 ```bash
-cd server
-npm run dev
-```
-*Server runs on `http://localhost:5000`*
+# Backend (Port 5000)
+cd server && npm run dev
 
-#### Start Client:
-```bash
-cd client
-npm run dev
+# Frontend (Port 5173)
+cd client && npm run dev
 ```
-*Client runs on `http://localhost:5173`*
+
+---
+
+## 🌐 Render Deployment Configuration
+
+| Setting | Value |
+| :--- | :--- |
+| **Service Type** | Web Service |
+| **Environment** | `Node` |
+| **Root Directory** | `dayflow/server` |
+| **Build Command** | `npm install && npm run build && cd ../client && npm install && npm run build` |
+| **Start Command** | `node dist/server.js` |
+
+### Environment Variables required on Render:
+- `PORT` = `5000`
+- `NODE_ENV` = `production`
+- `DATABASE_URL` = `(Your Supabase Pooler Connection String)`
+- `JWT_SECRET` = `(Your JWT Secret String)`
+- `BREVO_API_KEY` = `(Your Brevo API Key)`
+- `EMAIL_FROM` = `odoovsb@gmail.com`
+- `CLOUDINARY_CLOUD_NAME` = `nr1r5044`
+- `CLOUDINARY_API_KEY` = `(Your Cloudinary API Key)`
+- `CLOUDINARY_API_SECRET` = `(Your Cloudinary API Secret)`
