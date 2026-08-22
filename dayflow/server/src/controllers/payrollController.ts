@@ -48,12 +48,13 @@ export const payrollController = {
 
   async createSalaryStructure(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { employeeId, basic_salary, allowances, deductions, effective_from } = req.body;
-      if (!employeeId || !basic_salary) {
+      const { employeeId, employee_id, basic_salary, allowances, deductions, effective_from } = req.body;
+      const targetEmpId = employeeId || employee_id;
+      if (!targetEmpId || !basic_salary) {
         throw new AppError('Employee ID and basic salary are required.', 400);
       }
       const result = await payrollService.createOrUpdateSalaryStructure({
-        employeeId,
+        employeeId: targetEmpId,
         basic_salary: parseFloat(basic_salary),
         allowances: parseFloat(allowances) || 0,
         deductions: parseFloat(deductions) || 0,
@@ -77,12 +78,13 @@ export const payrollController = {
 
   async generatePayroll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { employeeId, pay_period } = req.body;
-      if (!employeeId || !pay_period) {
+      const { employeeId, employee_id, pay_period } = req.body;
+      const targetEmpId = employeeId || employee_id;
+      if (!targetEmpId || !pay_period) {
         throw new AppError('Employee ID and pay period are required.', 400);
       }
-      const result = await payrollService.generatePayroll({ employeeId, pay_period });
-      res.status(201).json({ success: true, message: 'Payroll generated.', data: { payroll: result } });
+      const payroll = await payrollService.generatePayroll({ employeeId: targetEmpId, pay_period });
+      res.json({ success: true, message: 'Payroll generated successfully.', data: { payroll } });
     } catch (err) {
       next(err);
     }
