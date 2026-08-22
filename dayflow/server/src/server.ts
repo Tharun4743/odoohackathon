@@ -63,7 +63,7 @@ app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    service: 'Dayflow HRMS API',
+    service: 'Work Suite HRMS API',
   });
 });
 
@@ -103,7 +103,7 @@ app.use(errorHandler);
 app.listen(PORT, () => {
   console.log(`
   ╔═══════════════════════════════════════╗
-  ║         Dayflow HRMS Server           ║
+  ║       Work Suite HRMS Server          ║
   ║   "Every workday, perfectly aligned." ║
   ╠═══════════════════════════════════════╣
   ║  Status:  Running                     ║
