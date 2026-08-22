@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input } from '../../components/ui';
 import toast from 'react-hot-toast';
@@ -154,14 +154,18 @@ export const LoginPage: React.FC = () => {
               </Button>
             </form>
 
-            {/* Registration note */}
-            <div className="mt-4 p-3 bg-amber-50/70 border border-amber-200/70 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800">
-              <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              <span>Self-registration is disabled. Employee accounts are created by HR. Contact your HR admin if you need credentials.</span>
+            {/* Sign Up prompt */}
+            <div className="mt-5 pt-4 border-t border-stone-100 text-center">
+              <p className="text-xs text-stone-500 font-medium">
+                Don't have an account?{' '}
+                <Link to="/register" className="font-bold text-stone-900 hover:underline">
+                  Sign Up
+                </Link>
+              </p>
             </div>
 
             {/* Team One-Click Login */}
-            <div className="mt-5 pt-4 border-t border-stone-100">
+            <div className="mt-4 pt-4 border-t border-stone-100">
               <p className="text-[11px] text-stone-400 mb-2.5 text-center font-bold uppercase tracking-wider">Quick Team Member Login</p>
               <div className="grid grid-cols-2 gap-2">
                 {teamAccounts.map((acc) => (

@@ -10,6 +10,22 @@ export const authService = {
     return { user: user as User, employee };
   },
 
+  async sendRegisterOtp(data: { employee_id: string; email: string; role: UserRole }) {
+    const res = await api.post('/auth/register/send-otp', data);
+    return res.data;
+  },
+
+  async verifyRegisterOtp(data: {
+    employee_id: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    otp: string;
+  }) {
+    const res = await api.post('/auth/register/verify-otp', data);
+    return res.data;
+  },
+
   async register(data: { employee_id: string; email: string; password: string; role: UserRole }) {
     const res = await api.post('/auth/register', data);
     return res.data;
