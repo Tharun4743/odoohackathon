@@ -36,3 +36,12 @@ Thumbs.db
 
 # Antigravity artifacts
 .gemini/
+
+# Large media & video files
+*.mp4
+*.webm
+*.mov
+*.avi
+*.mkv
+*.wav
+*.mp3
