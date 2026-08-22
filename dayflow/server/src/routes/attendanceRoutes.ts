@@ -11,6 +11,7 @@ router.post('/check-out', requireAuth, requireEmployee, attendanceController.che
 router.get('/today', requireAuth, requireEmployee, attendanceController.getTodayAttendance);
 router.get('/month', requireAuth, requireEmployee, attendanceController.getMonthAttendance);
 router.get('/live-today', requireAuth, requireHR, attendanceController.getLiveStatusToday);
+router.get('/live-status', requireAuth, requireHR, attendanceController.getLiveStatusToday);
 router.get('/my', requireAuth, requireEmployee, attendanceController.getMyHistory);
 router.get('/weekly', requireAuth, requireEmployee, attendanceController.getWeeklySummary);
 router.get('/all', requireAuth, requireHR, attendanceController.getAllAttendance);
