@@ -62,14 +62,9 @@ export const Sidebar: React.FC = () => {
           <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain rounded-full scale-105" />
         </div>
         {!collapsed && (
-          <div className="min-w-0 flex items-center justify-between flex-1">
-            <div>
-              <h1 className="font-extrabold text-stone-900 text-sm leading-tight tracking-tight">Work Suite</h1>
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">HRMS</p>
-            </div>
-            <span className="text-[10px] font-bold bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-md border border-stone-200">
-              v1.0
-            </span>
+          <div className="min-w-0 flex-1">
+            <h1 className="font-extrabold text-stone-900 text-sm leading-tight tracking-tight">Work Suite</h1>
+            <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">HRMS</p>
           </div>
         )}
       </div>
