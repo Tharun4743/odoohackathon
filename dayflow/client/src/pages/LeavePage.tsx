@@ -1,3 +1,4 @@
+/** Time Off / Leave Management Module - Person 3 */
 import React, { useEffect, useState } from 'react';
 import { Plus, ChevronLeft, ChevronRight, MessageSquare, Check, X as XIcon, Plane, Clock } from 'lucide-react';
 import { leaveService } from '../services/leaveService';
