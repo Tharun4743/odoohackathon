@@ -37,7 +37,7 @@ export const LoginPage: React.FC = () => {
 
   const teamAccounts = [
     { label: 'Tharun (Admin)', email: 'tharunkumark42007@gmail.com', password: 'Admin@123', role: 'ADMIN' },
-    { label: 'Sanjay (HR)', email: 'sanjayselvakumar05@gmail.com', password: 'Hr@123', role: 'HR' },
+    { label: 'Sanjay (HR)', email: 'sanjayselvakumar05@gmail.com', password: '12345678', role: 'HR' },
     { label: 'Ramkishore', email: 'ramkishoresm@gmail.com', password: 'Employee@123', role: 'EMPLOYEE' },
     { label: 'Santhosh', email: 'writetokumarsanthosh@gmail.com', password: 'Employee@123', role: 'EMPLOYEE' },
   ];

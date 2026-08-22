@@ -2,7 +2,7 @@ import { query } from '../config/database';
 import bcrypt from 'bcryptjs';
 import { AppError } from '../middleware/errorHandler';
 import { User, UserRole } from '../types';
-import { sendEmail } from '../utils/mailer';
+import { sendEmail, buildProfessionalEmailHtml } from '../utils/mailer';
 
 // In-memory store for registration OTPs with 15-minute expiration
 interface PendingRegistration {
@@ -23,28 +23,24 @@ export const authService = {
   }): Promise<{ success: boolean; message: string }> {
     const cleanEmail = data.email.toLowerCase().trim();
     const cleanEmpId = data.employee_id.trim().toUpperCase();
-    const role: UserRole = data.role === 'HR' ? 'HR' : 'EMPLOYEE';
+    const role = data.role || 'EMPLOYEE';
 
-    if (!cleanEmpId || !cleanEmail) {
-      throw new AppError('Employee ID and email address are required.', 400);
+    // 1. Self-Registration Policy: Allow only Admin or Employee provisioning
+    const userExists = await query('SELECT id FROM users WHERE email = $1', [cleanEmail]);
+    if (userExists.rows.length > 0) {
+      throw new AppError('An account with this email address already exists. Please sign in.', 409);
     }
 
-    // Check if user already exists
-    const existing = await query(
-      'SELECT id, email, employee_id FROM users WHERE email = $1 OR employee_id = $2',
-      [cleanEmail, cleanEmpId]
-    );
-    if (existing.rows.length > 0) {
-      if (existing.rows[0].email === cleanEmail) {
-        throw new AppError('An account with this email address already exists. Please sign in.', 409);
-      }
-      throw new AppError('An account with this Employee ID already exists. Please sign in.', 409);
+    const empIdExists = await query('SELECT id FROM users WHERE employee_id = $1', [cleanEmpId]);
+    if (empIdExists.rows.length > 0) {
+      throw new AppError(`Employee ID ${cleanEmpId} is already registered.`, 409);
     }
 
     // Generate 6-digit numeric OTP code
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
+    // Store in memory
     registrationOtpStore.set(cleanEmail, {
       employee_id: cleanEmpId,
       email: cleanEmail,
@@ -53,33 +49,26 @@ export const authService = {
       expiresAt,
     });
 
-    // Send verification email via Brevo HTTPS API
+    // Send verification email via Brevo HTTPS API with Work Suite Logo
     await sendEmail({
       to: cleanEmail,
       subject: 'Work Suite HRMS — Verify Your Email to Complete Sign Up',
-      html: `
-        <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 28px; background: #f5f5f4; border-radius: 16px; max-width: 500px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #1c1917; font-size: 22px; font-weight: 800; margin: 0;">Work Suite HRMS</h1>
-            <p style="color: #78716c; font-size: 13px; margin: 4px 0 0;">New Account Registration</p>
+      html: buildProfessionalEmailHtml({
+        title: 'New Account Email Verification',
+        badgeText: 'SECURITY VERIFICATION',
+        badgeColor: '#10b981',
+        recipientName: `New Team Member (${cleanEmpId})`,
+        bodyHtml: `
+          <p>Welcome to <strong>Work Suite HRMS</strong>! Please use the 6-digit verification code below to verify your email and complete your account creation:</p>
+          <div style="background-color: #09090b; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: 8px; padding: 16px 28px; border-radius: 14px; text-align: center; margin: 20px 0; font-family: monospace;">
+            ${otp}
           </div>
-          <div style="background: white; border: 1px solid #e7e5e4; padding: 24px; border-radius: 12px; text-align: center;">
-            <p style="color: #44403c; font-size: 14px; margin-top: 0; line-height: 1.5;">
-              Welcome to Work Suite HRMS! Please use the 6-digit verification code below to complete your account registration for <strong>${cleanEmpId}</strong>.
-            </p>
-            <p style="color: #78716c; font-size: 12px; margin-bottom: 12px;">Your Email Verification Code:</p>
-            <div style="background: #1c1917; color: white; font-size: 28px; font-weight: 800; letter-spacing: 6px; padding: 14px 24px; border-radius: 10px; display: inline-block; margin: 0 auto 16px;">
-              ${otp}
-            </div>
-            <p style="color: #dc2626; font-size: 12px; font-weight: 600; margin: 0;">
-              ⏳ This code expires in 15 minutes.
-            </p>
-          </div>
-          <p style="color: #a8a29e; font-size: 11px; text-align: center; margin-top: 16px;">
-            If you did not request this registration, please ignore this email.
+          <p style="color: #ef4444; font-size: 12px; font-weight: 600; text-align: center; margin: 0;">
+            ⏳ This code is valid for 15 minutes only.
           </p>
-        </div>
-      `,
+        `,
+        footerNote: 'If you did not request this account registration, please ignore this email.',
+      }),
     });
 
     return {
@@ -283,33 +272,25 @@ export const authService = {
       [otp, expiresAt, cleanEmail]
     );
 
-    // Send email via Brevo HTTPS API
+    // Send email via Brevo HTTPS API with Work Suite Logo
     await sendEmail({
       to: cleanEmail,
       subject: 'Work Suite HRMS — Password Reset Verification Code',
-      html: `
-        <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; padding: 28px; background: #f5f5f4; border-radius: 16px; max-width: 500px; margin: 0 auto;">
-          <div style="text-align: center; margin-bottom: 20px;">
-            <h1 style="color: #1c1917; font-size: 22px; font-weight: 800; margin: 0;">Work Suite HRMS</h1>
-            <p style="color: #78716c; font-size: 13px; margin: 4px 0 0;">Password Reset Request</p>
+      html: buildProfessionalEmailHtml({
+        title: 'Password Reset Verification',
+        badgeText: 'SECURITY ACTION',
+        badgeColor: '#f59e0b',
+        bodyHtml: `
+          <p>We received a request to reset your password for your <strong>Work Suite HRMS</strong> account. Use the 6-digit verification code below to authorize the change:</p>
+          <div style="background-color: #09090b; color: #ffffff; font-size: 32px; font-weight: 800; letter-spacing: 8px; padding: 16px 28px; border-radius: 14px; text-align: center; margin: 20px 0; font-family: monospace;">
+            ${otp}
           </div>
-          <div style="background: white; border: 1px solid #e7e5e4; padding: 24px; border-radius: 12px; text-align: center;">
-            <p style="color: #44403c; font-size: 14px; margin-top: 0; line-height: 1.5;">
-              We received a request to reset your password for your Work Suite HRMS account.
-            </p>
-            <p style="color: #78716c; font-size: 12px; margin-bottom: 12px;">Your 6-Digit Verification Code is:</p>
-            <div style="background: #1c1917; color: white; font-size: 28px; font-weight: 800; letter-spacing: 6px; padding: 14px 24px; border-radius: 10px; display: inline-block; margin: 0 auto 16px;">
-              ${otp}
-            </div>
-            <p style="color: #dc2626; font-size: 12px; font-weight: 600; margin: 0;">
-              ⏳ This code is valid for 15 minutes only.
-            </p>
-          </div>
-          <p style="color: #a8a29e; font-size: 11px; text-align: center; margin-top: 16px;">
-            If you did not request this password reset, please ignore this email or notify your HR administrator.
+          <p style="color: #ef4444; font-size: 12px; font-weight: 600; text-align: center; margin: 0;">
+            ⏳ This code is valid for 15 minutes only.
           </p>
-        </div>
-      `,
+        `,
+        footerNote: 'If you did not request this password reset, please ignore this email or notify your HR administrator immediately.',
+      }),
     });
 
     return {
