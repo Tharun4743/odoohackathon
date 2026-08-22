@@ -78,21 +78,29 @@ app.use('/api/analytics', analyticsRoutes);
 
 // Static frontend serving in production (Express 5 compatible)
 const clientDistPaths = [
+  path.resolve(__dirname, 'public'),
+  path.resolve(__dirname, '../public'),
+  path.resolve(process.cwd(), 'public'),
   path.resolve(__dirname, '../../client/dist'),
   path.resolve(__dirname, '../client/dist'),
   path.resolve(process.cwd(), '../client/dist'),
   path.resolve(process.cwd(), 'client/dist'),
+  path.resolve(process.cwd(), '../../client/dist'),
 ];
 
 const existingClientDist = clientDistPaths.find((p) => fs.existsSync(p));
 if (existingClientDist) {
   console.log(`📁 Serving client static build from: ${existingClientDist}`);
-  app.use(express.static(existingClientDist));
-  app.use((req, res, next) => {
-    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
-      return res.sendFile(path.join(existingClientDist, 'index.html'));
+  app.use(express.static(existingClientDist, { index: false }));
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
+      return next();
     }
-    next();
+    // If it's a file request that wasn't found in express.static, return 404
+    if (path.extname(req.path)) {
+      return res.status(404).send('Asset not found');
+    }
+    res.sendFile(path.join(existingClientDist, 'index.html'));
   });
 }
 

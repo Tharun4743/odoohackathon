@@ -5,7 +5,7 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "build": "tsc",
+    "build": "tsc && npm --prefix ../client install && npm --prefix ../client run build && node -e \"const fs=require('fs'); fs.cpSync('../client/dist', './public', { recursive: true });\"",
     "start": "node dist/server.js",
     "migrate": "tsx src/db/migrate.ts",
     "seed": "tsx src/db/seed.ts"
