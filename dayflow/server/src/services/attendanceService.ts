@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { AttendanceFilters } from '../types';
+import { sendEmail, buildProfessionalEmailHtml } from '../utils/mailer';
 
 export const attendanceService = {
   async checkIn(employeeId: string): Promise<Record<string, unknown>> {
@@ -24,6 +25,36 @@ export const attendanceService = {
        RETURNING *`,
       [employeeId, today, now]
     );
+
+    // Send Biometric Check-In Email Alert with Work Suite Logo
+    query(
+      `SELECT u.email, e.first_name, e.employee_code FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
+      [employeeId]
+    ).then((empRes) => {
+      if (empRes.rows[0]?.email) {
+        sendEmail({
+          to: empRes.rows[0].email,
+          subject: `⏰ Biometric Check-In Confirmed - ${today}`,
+          html: buildProfessionalEmailHtml({
+            title: 'Biometric Check-In Confirmed',
+            badgeText: 'BIOMETRIC SCAN VERIFIED',
+            badgeColor: '#10b981',
+            recipientName: `${empRes.rows[0].first_name} (${empRes.rows[0].employee_code})`,
+            bodyHtml: `
+              <p>Your biometric attendance punch has been captured and validated at the terminal:</p>
+              <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; color: #065f46; font-weight: bold; font-size: 15px;">✅ Check-In Timestamp Recorded</p>
+                <p style="margin: 6px 0 0 0; color: #047857; font-size: 13px;">Time: <strong>${now.toLocaleTimeString()}</strong> · Date: <strong>${today}</strong></p>
+                <p style="margin: 3px 0 0 0; color: #047857; font-size: 12px;">Terminal: ZKTeco BioAccess #01 (Gate A)</p>
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">Have a great and productive workday!</p>
+            `,
+            footerNote: 'Work Suite Enterprise Attendance Engine · Biometric Terminal Sync',
+          }),
+          text: `Biometric Check-In Verified at ${now.toLocaleTimeString()} on ${today} (Terminal #01).`,
+        }).catch(() => {});
+      }
+    }).catch(() => {});
 
     return result.rows[0];
   },
@@ -127,6 +158,37 @@ export const attendanceService = {
        RETURNING *`,
       [now, breakDuration, netWorkingHours, status, employeeId, today]
     );
+
+    // Send Biometric Check-Out Email Alert
+    query(
+      `SELECT u.email, e.first_name, e.employee_code FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
+      [employeeId]
+    ).then((empRes) => {
+      if (empRes.rows[0]?.email) {
+        sendEmail({
+          to: empRes.rows[0].email,
+          subject: `⏰ Biometric Check-Out Confirmed - Shift Summary (${today})`,
+          html: buildProfessionalEmailHtml({
+            title: 'Biometric Check-Out Logged',
+            badgeText: 'SHIFT COMPLETED',
+            badgeColor: '#10b981',
+            recipientName: `${empRes.rows[0].first_name} (${empRes.rows[0].employee_code})`,
+            bodyHtml: `
+              <p>Your biometric checkout scan was successfully logged and shift hours calculated:</p>
+              <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; color: #166534; font-weight: bold; font-size: 15px;">🏁 Shift Punch Summary</p>
+                <p style="margin: 6px 0 0 0; color: #15803d; font-size: 13px;">Exit Time: <strong>${now.toLocaleTimeString()}</strong> · Date: <strong>${today}</strong></p>
+                <p style="margin: 3px 0 0 0; color: #15803d; font-size: 13px;">Break Deductions: <strong>${breakDuration} hours</strong></p>
+                <p style="margin: 6px 0 0 0; color: #166534; font-size: 14px; font-weight: bold;">Net Working Time: ${netWorkingHours} hours (Status: ${status})</p>
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">Thank you for your dedication and hard work today!</p>
+            `,
+            footerNote: 'Work Suite Enterprise Attendance Engine · Daily Shift Calculation',
+          }),
+          text: `Biometric Check-Out Logged at ${now.toLocaleTimeString()} on ${today}. Net Working Hours: ${netWorkingHours}h (Status: ${status}).`,
+        }).catch(() => {});
+      }
+    }).catch(() => {});
 
     return result.rows[0];
   },

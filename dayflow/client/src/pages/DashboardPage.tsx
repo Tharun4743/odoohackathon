@@ -12,6 +12,7 @@ import { payrollService } from '../services/payrollService';
 import { notificationService } from '../services/notificationService';
 import { analyticsService } from '../services/analyticsService';
 import { Card, Badge, Button, Skeleton, Input } from '../components/ui';
+import { AnnouncementsWidget } from '../components/announcements/AnnouncementsWidget';
 import type { Attendance, LeaveRequest, Payroll, Notification, DashboardKPIs, Employee } from '../types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
@@ -384,6 +385,9 @@ const EmployeeDashboard: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Official Announcements Board */}
+      <AnnouncementsWidget />
 
       {/* Recent Time Off Requests */}
       {leaves.length > 0 && (
@@ -816,6 +820,9 @@ const HRDashboard: React.FC = () => {
           )}
         </Card>
       </div>
+
+      {/* Official Company Announcements Broadcast Hub */}
+      <AnnouncementsWidget />
 
       {/* Quick Actions */}
       <Card>

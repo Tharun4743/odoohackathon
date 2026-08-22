@@ -13,6 +13,7 @@ import leaveRoutes from './routes/leaveRoutes';
 import payrollRoutes from './routes/payrollRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import announcementRoutes from './routes/announcementRoutes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 
 dotenv.config();
@@ -75,6 +76,7 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/announcements', announcementRoutes);
 
 // Static frontend serving in production (Express 5 compatible)
 const clientDistPaths = [

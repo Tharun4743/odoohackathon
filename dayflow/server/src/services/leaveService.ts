@@ -1,8 +1,8 @@
-/** Time Off / Leave Management Module - Person 3 */
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { LeaveFilters } from '../types';
 import { notificationService } from './notificationService';
+import { sendEmail, buildProfessionalEmailHtml } from '../utils/mailer';
 
 export const leaveService = {
   async applyLeave(data: {
@@ -42,15 +42,47 @@ export const leaveService = {
       [employeeId, leave_type, start_date, end_date, remarks]
     );
 
-    // Notify HR users
-    const hrUsers = await query(`SELECT id FROM users WHERE role IN ('HR', 'ADMIN')`);
+    // Fetch employee name
+    const empInfo = await query(
+      `SELECT first_name, last_name, employee_code FROM employees WHERE id = $1`,
+      [employeeId]
+    );
+    const empName = empInfo.rows[0] ? `${empInfo.rows[0].first_name} ${empInfo.rows[0].last_name} (${empInfo.rows[0].employee_code})` : 'An Employee';
+
+    // Notify HR users via in-app and email with Work Suite Logo
+    const hrUsers = await query(`SELECT id, email FROM users WHERE role IN ('HR', 'ADMIN')`);
     for (const hrUser of hrUsers.rows) {
-      await notificationService.create({
+      notificationService.create({
         userId: hrUser.id,
         title: 'New Leave Request',
-        message: `A new ${leave_type} leave request has been submitted for ${start_date} to ${end_date}.`,
+        message: `${empName} has submitted a new ${leave_type} leave request for ${start_date} to ${end_date}.`,
         type: 'LEAVE',
-      });
+      }).catch(() => {});
+
+      if (hrUser.email) {
+        sendEmail({
+          to: hrUser.email,
+          subject: `🏖️ New Time-Off Request: ${empName} (${leave_type} Leave)`,
+          html: buildProfessionalEmailHtml({
+            title: 'New Time-Off Request Submitted',
+            badgeText: 'PENDING APPROVAL',
+            badgeColor: '#3b82f6',
+            recipientName: 'HR / Administrator',
+            bodyHtml: `
+              <p>A new employee time-off request requires your managerial review and approval:</p>
+              <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; font-weight: bold; font-size: 15px; color: #1e293b;">${empName}</p>
+                <p style="margin: 6px 0 0 0; color: #475569; font-size: 13px;">Leave Category: <strong>${leave_type} Time Off</strong></p>
+                <p style="margin: 3px 0 0 0; color: #475569; font-size: 13px;">Requested Duration: <strong>${start_date}</strong> to <strong>${end_date}</strong></p>
+                ${remarks ? `<p style="margin: 6px 0 0 0; color: #475569; font-size: 12px; font-style: italic;">Reason: "${remarks}"</p>` : ''}
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">Please open the Leave Approvals dashboard to take action.</p>
+            `,
+            footerNote: 'Work Suite Enterprise HR Management · Leave & Time-Off Dispatcher',
+          }),
+          text: `New ${leave_type} leave request submitted by ${empName} for ${start_date} to ${end_date}.`,
+        }).catch(() => {});
+      }
     }
 
     return result.rows[0];
@@ -138,19 +170,44 @@ export const leaveService = {
       [comment, hrUserId, leaveId]
     );
 
-    // Get employee user_id for notification
+    // Get employee user_id and email for notification
     const empRes = await query(
-      `SELECT u.id as user_id, e.first_name FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
+      `SELECT u.id as user_id, u.email, e.first_name, e.employee_code FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
       [leave.employee_id]
     );
 
     if (empRes.rows.length > 0) {
-      await notificationService.create({
+      notificationService.create({
         userId: empRes.rows[0].user_id,
         title: 'Leave Request Approved',
         message: `Your ${leave.leave_type} leave from ${leave.start_date} to ${leave.end_date} has been approved.`,
         type: 'LEAVE',
-      });
+      }).catch(() => {});
+
+      if (empRes.rows[0].email) {
+        sendEmail({
+          to: empRes.rows[0].email,
+          subject: `✅ Time-Off Request APPROVED: ${leave.start_date} to ${leave.end_date}`,
+          html: buildProfessionalEmailHtml({
+            title: 'Your Time-Off Request is Approved',
+            badgeText: 'LEAVE APPROVED',
+            badgeColor: '#10b981',
+            recipientName: `${empRes.rows[0].first_name} (${empRes.rows[0].employee_code})`,
+            bodyHtml: `
+              <p>Great news! Your requested time-off application has been reviewed and officially approved:</p>
+              <div style="background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; color: #065f46; font-weight: bold; font-size: 15px;">🎉 Approved Time-Off Details</p>
+                <p style="margin: 6px 0 0 0; color: #047857; font-size: 13px;">Leave Category: <strong>${leave.leave_type} Time Off</strong></p>
+                <p style="margin: 3px 0 0 0; color: #047857; font-size: 13px;">Approved Duration: <strong>${leave.start_date}</strong> to <strong>${leave.end_date}</strong></p>
+                ${comment ? `<p style="margin: 6px 0 0 0; color: #047857; font-size: 12px; font-style: italic;">HR Approval Note: "${comment}"</p>` : ''}
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">Your calendar and attendance status records have been updated automatically.</p>
+            `,
+            footerNote: 'Work Suite Enterprise HR Management · Official Approval Notice',
+          }),
+          text: `Your ${leave.leave_type} leave from ${leave.start_date} to ${leave.end_date} has been APPROVED.${comment ? ` HR Note: ${comment}` : ''}`,
+        }).catch(() => {});
+      }
     }
 
     return result.rows[0];
@@ -173,17 +230,42 @@ export const leaveService = {
     );
 
     const empRes = await query(
-      `SELECT u.id as user_id FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
+      `SELECT u.id as user_id, u.email, e.first_name, e.employee_code FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
       [leave.employee_id]
     );
 
     if (empRes.rows.length > 0) {
-      await notificationService.create({
+      notificationService.create({
         userId: empRes.rows[0].user_id,
         title: 'Leave Request Rejected',
         message: `Your ${leave.leave_type} leave from ${leave.start_date} to ${leave.end_date} has been rejected. ${comment ? `Reason: ${comment}` : ''}`,
         type: 'LEAVE',
-      });
+      }).catch(() => {});
+
+      if (empRes.rows[0].email) {
+        sendEmail({
+          to: empRes.rows[0].email,
+          subject: `❌ Time-Off Request Update: ${leave.start_date} to ${leave.end_date}`,
+          html: buildProfessionalEmailHtml({
+            title: 'Time-Off Application Decision',
+            badgeText: 'APPLICATION REJECTED',
+            badgeColor: '#ef4444',
+            recipientName: `${empRes.rows[0].first_name} (${empRes.rows[0].employee_code})`,
+            bodyHtml: `
+              <p>Your requested time-off application has been reviewed by the HR team:</p>
+              <div style="background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; color: #991b1b; font-weight: bold; font-size: 15px;">Application Not Approved</p>
+                <p style="margin: 6px 0 0 0; color: #b91c1c; font-size: 13px;">Leave Category: <strong>${leave.leave_type} Time Off</strong></p>
+                <p style="margin: 3px 0 0 0; color: #b91c1c; font-size: 13px;">Requested Duration: <strong>${leave.start_date}</strong> to <strong>${leave.end_date}</strong></p>
+                ${comment ? `<p style="margin: 6px 0 0 0; color: #b91c1c; font-size: 12px; font-style: italic;">Reason / Manager Note: "${comment}"</p>` : ''}
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">Please contact your HR officer if you have questions or wish to submit revised dates.</p>
+            `,
+            footerNote: 'Work Suite Enterprise HR Management · Leave Management Department',
+          }),
+          text: `Your ${leave.leave_type} leave from ${leave.start_date} to ${leave.end_date} has been REJECTED.${comment ? ` Reason: ${comment}` : ''}`,
+        }).catch(() => {});
+      }
     }
 
     return result.rows[0];

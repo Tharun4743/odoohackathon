@@ -1,6 +1,7 @@
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { notificationService } from './notificationService';
+import { sendEmail, buildProfessionalEmailHtml } from '../utils/mailer';
 
 export const payrollService = {
   async getSalaryStructure(employeeId: string) {
@@ -173,18 +174,43 @@ export const payrollService = {
       );
     }
 
-    // 7. Notify employee
+    // 7. Notify employee via in-app and email
     const empRes = await query(
-      `SELECT u.id as user_id FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
+      `SELECT u.id as user_id, u.email, e.first_name, e.employee_code FROM employees e JOIN users u ON u.id = e.user_id WHERE e.id = $1`,
       [employeeId]
     );
     if (empRes.rows.length > 0) {
-      await notificationService.create({
+      notificationService.create({
         userId: empRes.rows[0].user_id,
         title: 'Payroll Generated',
         message: `Your payroll for ${pay_period} has been calculated based on ${payableDays}/${totalWorkingDays} payable days. Net salary: ₹${net_salary.toLocaleString('en-IN')}.`,
         type: 'PAYROLL',
-      });
+      }).catch(() => {});
+
+      if (empRes.rows[0].email) {
+        sendEmail({
+          to: empRes.rows[0].email,
+          subject: `💰 Official Salary Payslip Ready: Pay Period ${pay_period}`,
+          html: buildProfessionalEmailHtml({
+            title: `Payslip Issued: ${pay_period}`,
+            badgeText: 'PAYROLL DISPATCHED',
+            badgeColor: '#6366f1',
+            recipientName: `${empRes.rows[0].first_name} (${empRes.rows[0].employee_code})`,
+            bodyHtml: `
+              <p>Your official salary computation for pay period <strong>${pay_period}</strong> has been generated from your monthly attendance records:</p>
+              <div style="background-color: #f8fafc; border-left: 4px solid #6366f1; padding: 16px; border-radius: 10px; margin: 16px 0;">
+                <p style="margin: 0; font-size: 13px; color: #475569;">Payable Days: <strong>${payableDays} / ${totalWorkingDays} days</strong></p>
+                <p style="margin: 6px 0 0 0; font-size: 13px; color: #475569;">Gross Earned: <strong>₹${gross_salary.toLocaleString('en-IN')}</strong></p>
+                <p style="margin: 3px 0 0 0; font-size: 13px; color: #dc2626;">Statutory & Break Deductions: <strong>-₹${deductions.toLocaleString('en-IN')}</strong></p>
+                <p style="margin: 8px 0 0 0; font-size: 16px; color: #16a34a; font-weight: bold;">Net Disbursed Payout: ₹${net_salary.toLocaleString('en-IN')}</p>
+              </div>
+              <p style="font-size: 12px; color: #64748b; margin: 0;">You can log in to your Work Suite workspace to view and download your vector PDF payslip.</p>
+            `,
+            footerNote: 'Work Suite Enterprise Payroll & Compensation Division',
+          }),
+          text: `Your salary payslip for ${pay_period} has been generated. Net payout: Rs. ${net_salary}.`,
+        }).catch(() => {});
+      }
     }
 
     return result.rows[0];

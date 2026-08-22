@@ -162,6 +162,21 @@ export interface Notification {
   created_at: string;
 }
 
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'URGENT' | 'NORMAL' | 'INFO';
+  target_department_id?: string | null;
+  department_name?: string | null;
+  created_by: string;
+  author_first_name?: string;
+  author_last_name?: string;
+  author_email?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PaginatedResponse<T> {
   data: T[];
   total: number;
