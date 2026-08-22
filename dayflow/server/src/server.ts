@@ -13,6 +13,7 @@ import leaveRoutes from './routes/leaveRoutes';
 import payrollRoutes from './routes/payrollRoutes';
 import notificationRoutes from './routes/notificationRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import announcementRoutes from './routes/announcementRoutes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 
 dotenv.config();
@@ -75,6 +76,34 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/announcements', announcementRoutes);
+
+// Static frontend serving in production (Express 5 compatible)
+const clientDistPaths = [
+  path.resolve(__dirname, 'public'),
+  path.resolve(__dirname, '../public'),
+  path.resolve(process.cwd(), 'public'),
+  path.resolve(__dirname, '../../client/dist'),
+  path.resolve(__dirname, '../client/dist'),
+  path.resolve(process.cwd(), '../client/dist'),
+  path.resolve(process.cwd(), 'client/dist'),
+  path.resolve(process.cwd(), '../../client/dist'),
+];
+
+const existingClientDist = clientDistPaths.find((p) => fs.existsSync(p));
+if (existingClientDist) {
+  console.log(`📁 Serving client static build from: ${existingClientDist}`);
+  app.use(express.static(existingClientDist));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      if (path.extname(req.path)) {
+        return res.status(404).send('Asset not found');
+      }
+      return res.sendFile(path.join(existingClientDist, 'index.html'));
+    }
+    next();
+  });
+}
 
 // Static frontend serving in production (Express 5 compatible)
 const clientDistPaths = [

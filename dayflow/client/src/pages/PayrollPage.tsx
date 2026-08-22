@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { DollarSign, Download, Printer, Plus, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { DollarSign, Download, Printer, Plus, ChevronLeft, ChevronRight, Calendar, Sliders, Search, Eye } from 'lucide-react';
 import { payrollService } from '../services/payrollService';
 import { employeeService } from '../services/employeeService';
 import { useAuth } from '../context/AuthContext';
@@ -8,8 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import type { Payroll, Employee, SalaryStructure } from '../types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { downloadPayslipPDF } from '../utils/pdfExport';
 
 const PayslipContent = React.forwardRef<HTMLDivElement, { payslip: Payroll }>(({ payslip }, ref) => {
   const totalDays = payslip.total_working_days || 30;
@@ -159,6 +158,7 @@ export const PayrollPage: React.FC = () => {
   const [generateModal, setGenerateModal] = useState(false);
   const [generateForm, setGenerateForm] = useState({ employeeId: '', pay_period: format(new Date(), 'yyyy-MM') });
   const [generateLoading, setGenerateLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const payslipRef = useRef<HTMLDivElement>(null);
 
   const fetchData = async () => {
@@ -199,15 +199,24 @@ export const PayrollPage: React.FC = () => {
     } catch { toast.error('Failed to load payslip'); }
   };
 
-  const handleExportPDF = async () => {
-    if (!payslipRef.current) return;
-    const canvas = await html2canvas(payslipRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
-    const width = pdf.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, width, height);
-    pdf.save(`payslip-${payslipData?.pay_period}-${payslipData?.employee_code || 'emp'}.pdf`);
+  const openSalaryModalForEmployee = (p: Payroll) => {
+    setSalaryForm({
+      employeeId: p.employee_id,
+      basic_salary: String(p.basic_salary || ''),
+      allowances: String(p.allowances || ''),
+      deductions: String(p.deductions || ''),
+      effective_from: new Date().toISOString().split('T')[0],
+    });
+    setSalaryModal(true);
+  };
+
+  const handleExportPDF = () => {
+    const target = payslipData || payslipModal;
+    if (!target) {
+      toast.error('No payslip data loaded');
+      return;
+    }
+    downloadPayslipPDF(target);
   };
 
   const handleCreateSalary = async () => {
@@ -224,7 +233,7 @@ export const PayrollPage: React.FC = () => {
         deductions: parseFloat(salaryForm.deductions) || 0,
         effective_from: salaryForm.effective_from || new Date().toISOString().split('T')[0],
       });
-      toast.success('Salary structure saved');
+      toast.success('Salary structure updated successfully! Future payroll will reflect these changes.');
       setSalaryModal(false);
       setSalaryForm({ employeeId: '', basic_salary: '', allowances: '', deductions: '', effective_from: '' });
       fetchData();
@@ -304,7 +313,30 @@ export const PayrollPage: React.FC = () => {
 
       {/* Payroll Records */}
       <Card>
-        <h3 className="text-sm font-semibold text-slate-700 mb-4">{isHR ? 'Attendance-Linked Payroll Records' : 'Payroll History'}</h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100">
+          <div>
+            <h3 className="text-sm font-bold text-slate-800">
+              {isHR ? 'All Employees Payroll Ledger & Salary Controls' : 'My Payroll History'}
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Attendance-calculated gross earnings, deductions & net salary payout
+            </p>
+          </div>
+
+          {isHR && (
+            <div className="w-64">
+              <Input
+                id="payroll-search"
+                placeholder="Search name, code, or month..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                leftIcon={<Search className="w-3.5 h-3.5" />}
+                className="py-1 text-xs"
+              />
+            </div>
+          )}
+        </div>
+
         {isLoading ? <Loader className="h-32" /> : payrolls.length === 0 ? (
           <EmptyState icon={<DollarSign className="w-10 h-10" />} title="No payroll records" description="No payroll has been computed yet." />
         ) : (
@@ -323,33 +355,64 @@ export const PayrollPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {payrolls.map(p => (
-                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
-                      {isHR && (
+                  {payrolls
+                    .filter(p => {
+                      if (!searchQuery) return true;
+                      const q = searchQuery.toLowerCase();
+                      return (
+                        (p.first_name && p.first_name.toLowerCase().includes(q)) ||
+                        (p.last_name && p.last_name.toLowerCase().includes(q)) ||
+                        (p.employee_code && p.employee_code.toLowerCase().includes(q)) ||
+                        (p.department_name && p.department_name.toLowerCase().includes(q)) ||
+                        (p.pay_period && p.pay_period.toLowerCase().includes(q))
+                      );
+                    })
+                    .map(p => (
+                      <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        {isHR && (
+                          <td className="py-3 px-3">
+                            <p className="font-medium text-slate-700">{p.first_name} {p.last_name}</p>
+                            <p className="text-xs text-slate-500">{p.employee_code}</p>
+                          </td>
+                        )}
                         <td className="py-3 px-3">
-                          <p className="font-medium text-slate-700">{p.first_name} {p.last_name}</p>
-                          <p className="text-xs text-slate-500">{p.employee_code}</p>
+                          <Badge variant="blue">{p.pay_period}</Badge>
                         </td>
-                      )}
-                      <td className="py-3 px-3">
-                        <Badge variant="blue">{p.pay_period}</Badge>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700">
-                        <span className="font-semibold text-blue-700">
-                          {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
-                        </span>
-                        <span className="text-slate-400 text-xs"> / {p.total_working_days || 30} days</span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 font-medium">₹{Number(p.gross_salary).toLocaleString('en-IN')}</td>
-                      <td className="py-3 px-3 text-red-600">-₹{Number(p.deductions).toLocaleString('en-IN')}</td>
-                      <td className="py-3 px-3 text-emerald-700 font-bold">₹{Number(p.net_salary).toLocaleString('en-IN')}</td>
-                      <td className="py-3 px-3 text-right">
-                        <Button id={`view-payslip-${p.id}`} size="sm" variant="ghost" onClick={() => openPayslip(p)}>
-                          View Payslip
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
+                        <td className="py-3 px-3 text-slate-700">
+                          <span className="font-semibold text-blue-700">
+                            {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
+                          </span>
+                          <span className="text-slate-400 text-xs"> / {p.total_working_days || 30} days</span>
+                        </td>
+                        <td className="py-3 px-3 text-slate-700 font-medium">₹{Number(p.gross_salary).toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-red-600">-₹{Number(p.deductions).toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-emerald-700 font-bold">₹{Number(p.net_salary).toLocaleString('en-IN')}</td>
+                        <td className="py-3 px-3 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button
+                              id={`view-payslip-${p.id}`}
+                              size="sm"
+                              variant="ghost"
+                              leftIcon={<Eye className="w-3.5 h-3.5" />}
+                              onClick={() => openPayslip(p)}
+                            >
+                              View Payslip
+                            </Button>
+                            {isHR && (
+                              <Button
+                                id={`edit-salary-structure-${p.id}`}
+                                size="sm"
+                                variant="outline"
+                                leftIcon={<Sliders className="w-3.5 h-3.5 text-blue-600" />}
+                                onClick={() => openSalaryModalForEmployee(p)}
+                              >
+                                Update Structure
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

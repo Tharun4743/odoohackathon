@@ -48,42 +48,42 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div
       ref={overlayRef}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/40 backdrop-blur-sm"
       onClick={(e) => { if (e.target === overlayRef.current) onClose(); }}
     >
       <div className={clsx(
-        'relative w-full bg-white rounded-xl shadow-xl animate-fadeIn',
+        'relative w-full bg-white rounded-3xl border border-stone-200/90 shadow-2xl animate-fadeIn overflow-hidden',
         sizes[size]
       )}>
         {/* Header */}
         {title && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-            <h2 className="text-base font-semibold text-slate-800">{title}</h2>
+          <div className="flex items-center justify-between px-6 py-4.5 border-b border-stone-200/80 bg-stone-50/50">
+            <h2 className="text-sm font-extrabold text-stone-900 tracking-tight">{title}</h2>
             <button
               onClick={onClose}
-              className="p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+              className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
         {!title && (
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 z-10"
+            className="absolute top-4 right-4 p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 z-10"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         )}
 
         {/* Body */}
-        <div className="px-6 py-4 max-h-[70vh] overflow-y-auto">
+        <div className="px-6 py-5 max-h-[72vh] overflow-y-auto">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-slate-200 flex items-center justify-end gap-2">
+          <div className="px-6 py-4 border-t border-stone-200/80 bg-stone-50/50 flex items-center justify-end gap-2.5">
             {footer}
           </div>
         )}
@@ -124,6 +124,6 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       </>
     }
   >
-    <p className="text-sm text-slate-600">{message}</p>
+    <p className="text-sm text-stone-600 font-medium">{message}</p>
   </Modal>
 );

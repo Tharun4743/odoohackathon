@@ -12,9 +12,43 @@ const JWT_COOKIE_OPTIONS = {
 };
 
 export const authController = {
+  async sendRegisterOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { employee_id, email, role = 'EMPLOYEE' } = req.body;
+      if (!employee_id || !email) {
+        throw new AppError('Employee ID and email are required.', 400);
+      }
+      const result = await authService.sendRegisterOtp({ employee_id, email, role });
+      res.json({ success: true, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async verifyRegisterOtp(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { employee_id, email, password, role = 'EMPLOYEE', otp, first_name, last_name } = req.body;
+      if (!employee_id || !email || !password || !otp) {
+        throw new AppError('Employee ID, email, password, and verification code are required.', 400);
+      }
+      const result = await authService.verifyRegisterOtp({
+        employee_id,
+        email,
+        password,
+        role,
+        otp,
+        first_name,
+        last_name,
+      });
+      res.status(201).json({ success: true, message: result.message, data: { user: result.user } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
   async register(req: Request, res: Response, next: NextFunction) {
     try {
-      const { employee_id, email, password, role = 'EMPLOYEE' } = req.body;
+      const { employee_id, email, password, role = 'EMPLOYEE', first_name, last_name } = req.body;
 
       if (!employee_id || !email || !password) {
         throw new AppError('Employee ID, email and password are required.', 400);
@@ -26,11 +60,11 @@ export const authController = {
         throw new AppError('Invalid role specified.', 400);
       }
 
-      const user = await authService.register({ employee_id, email, password, role });
+      const user = await authService.register({ employee_id, email, password, role, first_name, last_name });
 
       res.status(201).json({
         success: true,
-        message: 'Account created successfully.',
+        message: 'Account created successfully. You can now sign in.',
         data: { user },
       });
     } catch (err) {
@@ -96,6 +130,32 @@ export const authController = {
       }
       await authService.changePassword(req.user!.userId, currentPassword, newPassword);
       res.json({ success: true, message: 'Password changed successfully.' });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        throw new AppError('Email address is required.', 400);
+      }
+      const result = await authService.forgotPassword(email);
+      res.json({ success: true, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, token, newPassword } = req.body;
+      if (!email || !token || !newPassword) {
+        throw new AppError('Email, verification code, and new password are required.', 400);
+      }
+      const result = await authService.resetPassword(email, token, newPassword);
+      res.json({ success: true, message: result.message });
     } catch (err) {
       next(err);
     }
