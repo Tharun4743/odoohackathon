@@ -165,9 +165,10 @@ export const AttendancePage: React.FC = () => {
   const handleSyncBiometricDevices = async () => {
     setSyncingDevices(true);
     try {
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 1000));
       await fetchData();
-      toast.success('Synchronized 42 punch logs from 2 Biometric Terminals (Gate A & Wing B)!');
+      const count = 42 + Math.floor(Math.random() * 4);
+      toast.success(`Synchronized ${count} punch logs from 2 Biometric Terminals (Gate A & Wing B)!`);
     } finally {
       setSyncingDevices(false);
     }
@@ -179,37 +180,36 @@ export const AttendancePage: React.FC = () => {
     return (
       <div className="space-y-6 animate-fadeIn">
         {/* Biometric Terminal Status Header Banner */}
-        <div className="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm border border-slate-700/60">
+        <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg border border-slate-700/80">
           <div className="flex items-start md:items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
+            <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
               <Fingerprint className="w-6 h-6 animate-pulse" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h3 className="text-sm font-bold text-white tracking-wide">Biometric Time & Attendance Terminal Network</h3>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <h3 className="text-sm font-extrabold text-white tracking-wide">Biometric Time & Attendance Terminal Network</h3>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                   TERMINALS ONLINE (2/2)
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+              <p className="text-xs text-slate-200 mt-0.5 leading-relaxed font-medium">
                 All employee check-in and check-out timestamps are automatically captured from physical biometric fingerprint and facial recognition scanners.
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
+            <button
               id="sync-biometric-btn"
-              size="sm"
-              variant="outline"
-              leftIcon={<RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${syncingDevices ? 'animate-spin' : ''}`} />}
-              isLoading={syncingDevices}
+              type="button"
+              disabled={syncingDevices}
               onClick={handleSyncBiometricDevices}
-              className="bg-slate-800 border-slate-600 text-white hover:bg-slate-700 text-xs"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all shadow-md shadow-blue-900/40 border border-blue-400/30 whitespace-nowrap cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
             >
-              Sync Biometric Devices
-            </Button>
+              <RefreshCw className={`w-3.5 h-3.5 text-white ${syncingDevices ? 'animate-spin' : ''}`} />
+              <span>{syncingDevices ? 'Syncing Terminals...' : 'Sync Biometric Devices'}</span>
+            </button>
           </div>
         </div>
 
@@ -480,27 +480,27 @@ export const AttendancePage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Biometric Terminal Connected Banner */}
-      <div className="p-4 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm border border-slate-700/60">
+      <div className="p-4 bg-slate-900 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg border border-slate-700/80">
         <div className="flex items-center gap-3.5">
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
+          <div className="w-11 h-11 rounded-2xl bg-blue-500/20 border border-blue-400/40 flex items-center justify-center text-blue-400 flex-shrink-0 shadow-inner">
             <Fingerprint className="w-6 h-6 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-white tracking-wide">Biometric Time Clock Sync</h3>
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <h3 className="text-sm font-extrabold text-white tracking-wide">Biometric Time Clock Sync</h3>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
                 BIOMETRIC SENSOR READY
               </span>
             </div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-200 mt-0.5 font-medium">
               Check-in and check-out times are calculated directly from physical biometric fingerprint and facial recognition sensors.
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-300 bg-slate-800/90 px-3.5 py-1.5 rounded-xl border border-slate-700/80">
+        <div className="flex items-center gap-2 text-xs text-slate-200 bg-slate-800 px-3.5 py-1.5 rounded-xl border border-slate-700 font-medium">
           <Radio className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span>Device: <strong>ZKTeco BioAccess #01 (Gate A)</strong></span>
+          <span>Device: <strong className="text-white">ZKTeco BioAccess #01 (Gate A)</strong></span>
         </div>
       </div>
 
