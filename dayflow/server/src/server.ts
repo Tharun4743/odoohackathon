@@ -91,16 +91,15 @@ const clientDistPaths = [
 const existingClientDist = clientDistPaths.find((p) => fs.existsSync(p));
 if (existingClientDist) {
   console.log(`📁 Serving client static build from: ${existingClientDist}`);
-  app.use(express.static(existingClientDist, { index: false }));
-  app.get('*', (req, res, next) => {
-    if (req.path.startsWith('/api') || req.path.startsWith('/health')) {
-      return next();
+  app.use(express.static(existingClientDist));
+  app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api') && !req.path.startsWith('/health')) {
+      if (path.extname(req.path)) {
+        return res.status(404).send('Asset not found');
+      }
+      return res.sendFile(path.join(existingClientDist, 'index.html'));
     }
-    // If it's a file request that wasn't found in express.static, return 404
-    if (path.extname(req.path)) {
-      return res.status(404).send('Asset not found');
-    }
-    res.sendFile(path.join(existingClientDist, 'index.html'));
+    next();
   });
 }
 
