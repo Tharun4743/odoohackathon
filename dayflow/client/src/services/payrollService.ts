@@ -6,7 +6,7 @@ export const payrollService = {
     return res.data.data.salaryStructure;
   },
 
-  async getMyPayroll(params?: { page?: number; limit?: number }) {
+  async getMyPayroll(params?: { pay_period?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) {
     const res = await api.get('/payroll/my', { params });
     return res.data.data;
   },
@@ -16,7 +16,7 @@ export const payrollService = {
     return res.data.data.payslip;
   },
 
-  async getAllPayroll(params?: { employeeId?: string; pay_period?: string; page?: number; limit?: number }) {
+  async getAllPayroll(params?: { employeeId?: string; pay_period?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) {
     const res = await api.get('/payroll/all', { params });
     return res.data.data;
   },
