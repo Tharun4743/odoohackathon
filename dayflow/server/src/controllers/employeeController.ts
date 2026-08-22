@@ -102,9 +102,11 @@ export const employeeController = {
   async uploadProfileImage(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       if (!req.file) throw new AppError('No file uploaded.', 400);
-      const employee = req.user!.role === 'EMPLOYEE'
-        ? await employeeService.getByUserId(req.user!.userId)
-        : await employeeService.getById(req.params.id as string);
+
+      // If specific employee id is in params (e.g. /:id/image), use that; otherwise use logged-in user's profile (/profile/me/image)
+      const employee = req.params.id
+        ? await employeeService.getById(req.params.id as string)
+        : await employeeService.getByUserId(req.user!.userId);
 
       const url = await employeeService.uploadProfileImage(employee.id as string, req.file);
       res.json({ success: true, message: 'Profile image updated.', data: { profile_image: url } });

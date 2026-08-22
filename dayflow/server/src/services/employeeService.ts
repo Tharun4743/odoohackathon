@@ -285,23 +285,37 @@ export const employeeService = {
   },
 
   async uploadProfileImage(employeeId: string, file: Express.Multer.File): Promise<string> {
-    const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: `worksuite/profiles`, resource_type: 'image', transformation: [{ width: 300, height: 300, crop: 'fill' }] },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result as { secure_url: string; public_id: string });
-        }
-      );
-      stream.end(file.buffer);
-    });
+    let imageUrl = '';
+
+    try {
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+        const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+          const stream = cloudinary.uploader.upload_stream(
+            { folder: `worksuite/profiles`, resource_type: 'image', transformation: [{ width: 300, height: 300, crop: 'fill' }] },
+            (error, result) => {
+              if (error) reject(error);
+              else resolve(result as { secure_url: string; public_id: string });
+            }
+          );
+          stream.end(file.buffer);
+        });
+        imageUrl = uploadResult.secure_url;
+      }
+    } catch (err) {
+      console.warn('Cloudinary upload fallback triggered:', err);
+    }
+
+    if (!imageUrl) {
+      // Robust Data URI fallback (supported directly in PostgreSQL text columns)
+      imageUrl = `data:${file.mimetype || 'image/jpeg'};base64,${file.buffer.toString('base64')}`;
+    }
 
     await query(
       'UPDATE employees SET profile_image = $1, updated_at = NOW() WHERE id = $2',
-      [uploadResult.secure_url, employeeId]
+      [imageUrl, employeeId]
     );
 
-    return uploadResult.secure_url;
+    return imageUrl;
   },
 
   async getPendingApprovals() {
