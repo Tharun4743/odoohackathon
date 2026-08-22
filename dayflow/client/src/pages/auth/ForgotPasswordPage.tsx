@@ -70,9 +70,9 @@ export const ForgotPasswordPage: React.FC = () => {
     <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-8 font-sans">
       <div className="w-full max-w-md">
         {/* Logo */}
-        <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-12 h-12 rounded-full bg-white border border-stone-200 p-1 flex items-center justify-center shadow-xs overflow-hidden">
-            <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain rounded-full" />
+        <div className="flex items-center gap-3.5 mb-8 justify-center">
+          <div className="w-16 h-16 rounded-full bg-white border-2 border-stone-200 p-1 flex items-center justify-center shadow-sm overflow-hidden">
+            <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain rounded-full scale-105" />
           </div>
           <div>
             <h1 className="text-lg font-black text-stone-900 tracking-tight">Work Suite</h1>
