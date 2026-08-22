@@ -10,6 +10,22 @@ export const authService = {
     return { user: user as User, employee };
   },
 
+  async sendRegisterOtp(data: { employee_id: string; email: string; role: UserRole }) {
+    const res = await api.post('/auth/register/send-otp', data);
+    return res.data;
+  },
+
+  async verifyRegisterOtp(data: {
+    employee_id: string;
+    email: string;
+    password: string;
+    role: UserRole;
+    otp: string;
+  }) {
+    const res = await api.post('/auth/register/verify-otp', data);
+    return res.data;
+  },
+
   async register(data: { employee_id: string; email: string; password: string; role: UserRole }) {
     const res = await api.post('/auth/register', data);
     return res.data;
@@ -28,6 +44,16 @@ export const authService = {
 
   async changePassword(currentPassword: string, newPassword: string) {
     const res = await api.put('/auth/change-password', { currentPassword, newPassword });
+    return res.data;
+  },
+
+  async forgotPassword(email: string) {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  },
+
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const res = await api.post('/auth/reset-password', { email, token, newPassword });
     return res.data;
   },
 
