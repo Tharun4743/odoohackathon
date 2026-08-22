@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Clock, Calendar, DollarSign, Bell, ArrowRight, CheckCircle2,
   AlertCircle, User, Building2, TrendingUp, Users, FileText,
-  Coffee, Search, Plane, LogOut
+  Coffee, Search, Plane, LogOut, ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { attendanceService } from '../services/attendanceService';
@@ -11,6 +11,7 @@ import { leaveService } from '../services/leaveService';
 import { payrollService } from '../services/payrollService';
 import { notificationService } from '../services/notificationService';
 import { analyticsService } from '../services/analyticsService';
+import { employeeService } from '../services/employeeService';
 import { Card, Badge, Button, Skeleton, Input } from '../components/ui';
 import { AnnouncementsWidget } from '../components/announcements/AnnouncementsWidget';
 import type { Attendance, LeaveRequest, Payroll, Notification, DashboardKPIs, Employee } from '../types';
@@ -422,6 +423,7 @@ const HRDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [kpis, setKpis] = useState<DashboardKPIs | null>(null);
+  const [pendingApprovalsCount, setPendingApprovalsCount] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [cardFilter, setCardFilter] = useState<'ALL' | 'PRESENT' | 'ON_LEAVE' | 'ABSENT_UNAPPROVED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
@@ -431,8 +433,12 @@ const HRDashboard: React.FC = () => {
   useEffect(() => {
     const fetch = async () => {
       try {
-        const data = await analyticsService.getDashboard();
-        setKpis(data);
+        const [data, pending] = await Promise.allSettled([
+          analyticsService.getDashboard(),
+          employeeService.getPendingApprovals(),
+        ]);
+        if (data.status === 'fulfilled') setKpis(data.value);
+        if (pending.status === 'fulfilled') setPendingApprovalsCount(pending.value?.length || 0);
       } catch { /* handled */ }
       finally { setIsLoading(false); }
     };
@@ -482,6 +488,38 @@ const HRDashboard: React.FC = () => {
           </p>
         </div>
       </div>
+
+      {/* Pending User Registration Approvals Alert Banner */}
+      {pendingApprovalsCount > 0 && (
+        <div className="p-4 bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg border border-amber-400/40">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center text-white flex-shrink-0 shadow-inner">
+              <ShieldCheck className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-black text-white tracking-wide">
+                  Action Required: {pendingApprovalsCount} New User Registration{pendingApprovalsCount !== 1 ? 's' : ''} Pending Approval
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-white text-amber-900 shadow-xs">
+                  AUTHORIZATION QUEUE
+                </span>
+              </div>
+              <p className="text-xs text-amber-100 mt-0.5">
+                New accounts have completed email verification and require HR/Admin authorization before login access is granted.
+              </p>
+            </div>
+          </div>
+          <Button
+            id="review-pending-approvals-btn"
+            size="sm"
+            onClick={() => navigate('/employees?tab=approvals')}
+            className="bg-white text-amber-900 hover:bg-amber-50 font-bold border-0 text-xs shadow-md whitespace-nowrap"
+          >
+            Review & Authorize ({pendingApprovalsCount})
+          </Button>
+        </div>
+      )}
 
       {/* Choose Module (Admin/HR Core Flowchart Modules) */}
       <div className="space-y-3">

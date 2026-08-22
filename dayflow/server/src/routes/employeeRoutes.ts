@@ -23,7 +23,10 @@ router.post('/profile/me/image', requireAuth, requireEmployee, upload.single('im
 router.get('/departments', requireAuth, employeeController.getDepartments);
 router.post('/departments', requireAuth, requireHR, employeeController.createDepartment);
 
-// HR/Admin employee management
+// HR/Admin registration approval & employee management
+router.get('/pending-approvals', requireAuth, requireHR, employeeController.getPendingApprovals);
+router.post('/:id/approve-registration', requireAuth, requireHR, employeeController.approveRegistration);
+router.post('/:id/reject-registration', requireAuth, requireHR, employeeController.rejectRegistration);
 router.get('/', requireAuth, requireHR, employeeController.getAll);
 router.post('/', requireAuth, requireHR, employeeController.createEmployee);
 router.get('/:id', requireAuth, requireEmployee, employeeController.getById);
