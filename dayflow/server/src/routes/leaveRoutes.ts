@@ -1,3 +1,4 @@
+/** Time Off / Leave Management Module - Person 3 */
 import { Router } from 'express';
 import { leaveController } from '../controllers/leaveController';
 import { requireAuth, requireEmployee, requireHR } from '../middleware/auth';

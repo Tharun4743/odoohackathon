@@ -57,6 +57,7 @@ export const AttendancePage: React.FC = () => {
   const [allAttendance, setAllAttendance] = useState<Attendance[]>([]);
   const [liveEmployees, setLiveEmployees] = useState<Employee[]>([]);
   const [activeTab, setActiveTab] = useState<'TODAY_LIVE' | 'HISTORY'>('TODAY_LIVE');
+  const [employeeViewMode, setEmployeeViewMode] = useState<'MONTHLY' | 'WEEKLY' | 'DAILY'>('MONTHLY');
 
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -421,31 +422,72 @@ export const AttendancePage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Day-Wise Attendance for Ongoing / Current Month by default */}
+      {/* Attendance History (Daily / Weekly / Monthly View) */}
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 pb-4 border-b border-slate-100">
           <div>
             <h3 className="text-base font-bold text-slate-800">
-              Day-Wise Attendance — {format(new Date(`${selectedMonth}-01`), 'MMMM yyyy')}
+              {employeeViewMode === 'DAILY'
+                ? `Today's Attendance Breakdown — ${format(new Date(), 'MMMM d, yyyy')}`
+                : employeeViewMode === 'WEEKLY'
+                ? `Current Week Attendance Summary`
+                : `Day-Wise Attendance — ${format(new Date(`${selectedMonth}-01`), 'MMMM yyyy')}`}
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Default ongoing monthly attendance view with break tracking (directly inputs into payroll)
+              Verified punch records, net hours worked, and status classification (Inputs into Payroll)
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
-            <label className="text-xs font-semibold text-slate-600">Month:</label>
-            <Input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="py-1 text-xs w-36"
-            />
+          <div className="flex flex-wrap items-center gap-2">
+            {/* View Mode Toggle: Daily / Weekly / Monthly */}
+            <div className="flex bg-stone-100 p-1 rounded-xl text-xs font-semibold">
+              <button
+                id="view-mode-daily"
+                type="button"
+                onClick={() => setEmployeeViewMode('DAILY')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  employeeViewMode === 'DAILY' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Daily View
+              </button>
+              <button
+                id="view-mode-weekly"
+                type="button"
+                onClick={() => setEmployeeViewMode('WEEKLY')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  employeeViewMode === 'WEEKLY' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Weekly View
+              </button>
+              <button
+                id="view-mode-monthly"
+                type="button"
+                onClick={() => setEmployeeViewMode('MONTHLY')}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  employeeViewMode === 'MONTHLY' ? 'bg-white text-stone-900 shadow-xs' : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                Monthly View
+              </button>
+            </div>
+
+            {employeeViewMode === 'MONTHLY' && (
+              <div className="flex items-center gap-1.5">
+                <Input
+                  type="month"
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  className="py-1 text-xs w-36"
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* Month Summary KPI Bar */}
-        {monthData?.summary && (
+        {monthData?.summary && employeeViewMode !== 'DAILY' && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
             <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-xl">
               <p className="text-xs font-semibold text-emerald-700">Present Days</p>
@@ -466,9 +508,50 @@ export const AttendancePage: React.FC = () => {
           </div>
         )}
 
-        {/* Day-Wise Table */}
-        {isLoading ? <Loader className="h-40" /> : !monthData?.days?.length ? (
-          <EmptyState title="No attendance data for this month" />
+        {/* Dynamic Display based on Daily / Weekly / Monthly View */}
+        {isLoading ? (
+          <Loader className="h-40" />
+        ) : employeeViewMode === 'DAILY' ? (
+          <div className="p-6 bg-stone-50 rounded-2xl border border-stone-200/80 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-extrabold text-stone-900 text-sm">Today's Shift Status</h4>
+                <p className="text-xs text-stone-500">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
+              </div>
+              <Badge variant={statusColor(todayAttendance?.status || 'NOT_STARTED') as 'green' | 'red' | 'yellow' | 'blue' | 'slate'}>
+                {isOnBreak ? '☕ ON BREAK' : todayAttendance?.status || 'NOT PUNCHED'}
+              </Badge>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+              <div className="p-3 bg-white border border-stone-200 rounded-xl">
+                <p className="text-[11px] font-bold text-stone-400 uppercase">Check-In Timestamp</p>
+                <p className="text-sm font-bold text-stone-900 mt-1">
+                  {todayAttendance?.check_in ? format(new Date(todayAttendance.check_in), 'hh:mm:ss a') : 'Pending Punch'}
+                </p>
+              </div>
+              <div className="p-3 bg-white border border-stone-200 rounded-xl">
+                <p className="text-[11px] font-bold text-stone-400 uppercase">Break Duration</p>
+                <p className="text-sm font-bold text-amber-600 mt-1">
+                  {todayAttendance?.break_duration ? `${todayAttendance.break_duration} hours` : isOnBreak ? 'In Progress' : '0.00 hours'}
+                </p>
+              </div>
+              <div className="p-3 bg-white border border-stone-200 rounded-xl">
+                <p className="text-[11px] font-bold text-stone-400 uppercase">Check-Out Timestamp</p>
+                <p className="text-sm font-bold text-stone-900 mt-1">
+                  {todayAttendance?.check_out ? format(new Date(todayAttendance.check_out), 'hh:mm:ss a') : 'On Duty'}
+                </p>
+              </div>
+              <div className="p-3 bg-white border border-stone-200 rounded-xl">
+                <p className="text-[11px] font-bold text-stone-400 uppercase">Net Working Hours</p>
+                <p className="text-sm font-bold text-blue-700 mt-1">
+                  {todayAttendance?.working_hours ? `${todayAttendance.working_hours} hours` : '0.00 hours'}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : !monthData?.days?.length ? (
+          <EmptyState title="No attendance data for this selection" />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -480,11 +563,14 @@ export const AttendancePage: React.FC = () => {
                   <th className="text-left py-2.5 px-3">Break Duration</th>
                   <th className="text-left py-2.5 px-3">Check Out</th>
                   <th className="text-left py-2.5 px-3">Net Work Hours</th>
-                  <th className="text-left py-2.5 px-3">Status</th>
+                  <th className="text-left py-2.5 px-3">Attendance Status</th>
                 </tr>
               </thead>
               <tbody>
-                {monthData.days.map(dayRec => {
+                {(employeeViewMode === 'WEEKLY'
+                  ? monthData.days.slice(Math.max(0, monthData.days.length - 7))
+                  : monthData.days
+                ).map((dayRec) => {
                   const dayDate = new Date(dayRec.date);
                   const isWeekend = dayDate.getDay() === 0 || dayDate.getDay() === 6;
 
@@ -518,7 +604,7 @@ export const AttendancePage: React.FC = () => {
                         <div className="flex items-center gap-1.5">
                           <StatusIcon status={dayRec.status} />
                           <Badge variant={statusColor(dayRec.status) as 'green' | 'red' | 'yellow' | 'blue' | 'slate'}>
-                            {dayRec.status === 'LEAVE' ? 'TIME OFF' : dayRec.status}
+                            {dayRec.status === 'LEAVE' ? '🏖️ LEAVE' : dayRec.status === 'PRESENT' ? '✅ PRESENT' : dayRec.status === 'HALF_DAY' ? '⚠️ HALF-DAY' : '❌ ABSENT'}
                           </Badge>
                         </div>
                       </td>
