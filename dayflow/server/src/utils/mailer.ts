@@ -49,8 +49,8 @@ export function buildProfessionalEmailHtml(options: EmailTemplateOptions): strin
                 <tr>
                   <td style="vertical-align:middle; text-align:center;">
                     <!-- Circular Logo Emblem -->
-                    <div style="width:68px; height:68px; border-radius:50%; background-color:#ffffff; border:2px solid #52525b; padding:2px; display:inline-block; box-shadow:0 2px 10px rgba(0,0,0,0.35); overflow:hidden;">
-                      <img src="${WORKSUITE_LOGO_URL}" alt="Work Suite Logo" width="64" height="64" style="display:block; border-radius:50%; object-fit:contain;" />
+                    <div style="width:64px; height:64px; border-radius:50%; display:inline-block; box-shadow:0 4px 14px rgba(0,0,0,0.35); overflow:hidden;">
+                      <img src="${WORKSUITE_LOGO_URL}" alt="Work Suite Logo" width="64" height="64" style="display:block; border-radius:50%; width:64px; height:64px; object-fit:contain;" />
                     </div>
                   </td>
                 </tr>
