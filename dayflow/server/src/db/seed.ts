@@ -30,7 +30,7 @@ async function seed() {
 
     // 2. Hash passwords
     const adminHash = await bcrypt.hash('Admin@123', 12);
-    const hrHash = await bcrypt.hash('Hr@123', 12);
+    const hrHash = await bcrypt.hash('12345678', 12);
     const empHash = await bcrypt.hash('Employee@123', 12);
 
     // 3. Departments
