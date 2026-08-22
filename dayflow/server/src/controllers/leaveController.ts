@@ -1,3 +1,4 @@
+/** Time Off / Leave Management Module - Person 3 */
 import { Response, NextFunction } from 'express';
 import { leaveService } from '../services/leaveService';
 import { AuthRequest } from '../middleware/auth';

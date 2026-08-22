@@ -89,20 +89,20 @@ export const TopNav: React.FC<{ title?: string }> = ({ title }) => {
     : (user?.email?.[0] || 'U').toUpperCase();
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 flex-shrink-0">
+    <header className="h-16 bg-white/90 backdrop-blur-md border-b border-stone-200/90 flex items-center justify-between px-6 flex-shrink-0 sticky top-0 z-30">
       <div>
-        {title && <h2 className="text-lg font-semibold text-slate-800">{title}</h2>}
+        {title && <h2 className="text-base font-extrabold text-stone-900 tracking-tight">{title}</h2>}
       </div>
       <div className="flex items-center gap-3">
         {/* Notifications */}
         <button
           id="notifications-btn"
           onClick={() => navigate('/notifications')}
-          className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 transition-colors"
+          className="relative p-2 rounded-xl text-stone-500 hover:bg-stone-100 hover:text-stone-900 transition-colors"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-4 h-4" />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+            <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-xs">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -113,27 +113,27 @@ export const TopNav: React.FC<{ title?: string }> = ({ title }) => {
           <button
             id="user-menu-btn"
             onClick={() => setDropdownOpen(!dropdownOpen)}
-            className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl border border-stone-200/80 bg-stone-50/50 hover:bg-stone-100/80 transition-colors focus:outline-none focus:ring-2 focus:ring-black"
           >
-            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden shadow-sm">
+            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden shadow-xs">
               {user?.profile_image
-                ? <img src={user.profile_image} alt="" className="w-full h-full object-cover" />
+                ? <img src={user.profile_image} alt="" className="w-full h-full object-cover rounded-full" />
                 : initials
               }
             </div>
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-medium text-slate-800 leading-tight">{fullName}</p>
-              <p className="text-xs text-slate-500">{user?.role}</p>
+              <p className="text-xs font-bold text-stone-900 leading-tight truncate">{fullName}</p>
+              <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-wider">{user?.role}</p>
             </div>
-            <ChevronDown className={clsx('w-4 h-4 text-slate-400 transition-transform', dropdownOpen && 'rotate-180')} />
+            <ChevronDown className={clsx('w-3.5 h-3.5 text-stone-400 transition-transform', dropdownOpen && 'rotate-180')} />
           </button>
 
           {dropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-2xl border border-slate-200 shadow-xl z-50 animate-fadeIn overflow-hidden">
-              <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                <p className="text-sm font-semibold text-slate-800 truncate">{fullName}</p>
-                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-                <span className="inline-block mt-1 text-[11px] font-medium bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md">
+            <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl border border-stone-200 shadow-xl z-50 animate-fadeIn overflow-hidden">
+              <div className="px-4 py-3 bg-stone-50 border-b border-stone-100">
+                <p className="text-xs font-bold text-stone-900 truncate">{fullName}</p>
+                <p className="text-[11px] text-stone-500 font-mono truncate mt-0.5">{user?.email}</p>
+                <span className="inline-block mt-1.5 text-[10px] font-bold bg-black text-white px-2 py-0.5 rounded-full">
                   {user?.role}
                 </span>
               </div>
@@ -141,27 +141,27 @@ export const TopNav: React.FC<{ title?: string }> = ({ title }) => {
                 <button
                   id="dropdown-profile-btn"
                   onClick={() => { navigate('/profile'); setDropdownOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-stone-700 rounded-xl hover:bg-stone-100 transition-colors text-left"
                 >
-                  <User className="w-4 h-4 text-slate-500" />
+                  <User className="w-4 h-4 text-stone-400" />
                   My Profile
                 </button>
                 <button
                   id="dropdown-change-password-btn"
                   onClick={() => { setChangePasswordModal(true); setDropdownOpen(false); }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-slate-700 rounded-lg hover:bg-slate-100 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-stone-700 rounded-xl hover:bg-stone-100 transition-colors text-left"
                 >
-                  <Lock className="w-4 h-4 text-slate-500" />
+                  <Lock className="w-4 h-4 text-stone-400" />
                   Change Password
                 </button>
-                <div className="my-1 border-t border-slate-100" />
+                <div className="my-1 border-t border-stone-100" />
                 <button
                   id="dropdown-logout-btn"
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50 transition-colors text-left"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 rounded-xl hover:bg-rose-50 transition-colors text-left"
                 >
-                  <LogOut className="w-4 h-4 text-red-500" />
-                  Log Out
+                  <LogOut className="w-4 h-4 text-rose-500" />
+                  Sign Out
                 </button>
               </div>
             </div>
