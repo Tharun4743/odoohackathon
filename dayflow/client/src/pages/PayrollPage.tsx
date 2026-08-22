@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-  DollarSign, Download, Printer, Plus, ChevronLeft, ChevronRight,
+  DollarSign, Download, Printer, Plus,
   Calendar, Sliders, Search, Eye, ArrowUpDown, ArrowUp, ArrowDown,
-  RotateCcw
+  RotateCcw, Layers
 } from 'lucide-react';
 import { payrollService } from '../services/payrollService';
 import { employeeService } from '../services/employeeService';
@@ -159,16 +159,15 @@ export const PayrollPage: React.FC = () => {
   const [salaryStructure, setSalaryStructure] = useState<SalaryStructure | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [payslipModal, setPayslipModal] = useState<Payroll | null>(null);
   const [payslipData, setPayslipData] = useState<Payroll | null>(null);
 
-  // Filtering & Sorting State
-  const [selectedMonth, setSelectedMonth] = useState<string>('ALL');
+  // Filtering & Sorting State (Defaulting to Current Month 2026-08 so each employee appears only once)
+  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
   const [customMonth, setCustomMonth] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<SortField>('pay_period');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
+  const [sortBy, setSortBy] = useState<SortField>('name');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
 
   // HR Modal states
   const [salaryModal, setSalaryModal] = useState(false);
@@ -176,7 +175,7 @@ export const PayrollPage: React.FC = () => {
   const [salaryForm, setSalaryForm] = useState({ employeeId: '', basic_salary: '', allowances: '', deductions: '', effective_from: '' });
   const [salaryLoading, setSalaryLoading] = useState(false);
   const [generateModal, setGenerateModal] = useState(false);
-  const [generateForm, setGenerateForm] = useState({ employeeId: '', pay_period: format(new Date(), 'yyyy-MM') });
+  const [generateForm, setGenerateForm] = useState({ employeeId: '', pay_period: '2026-08' });
   const [generateLoading, setGenerateLoading] = useState(false);
 
   const payslipRef = useRef<HTMLDivElement>(null);
@@ -192,13 +191,12 @@ export const PayrollPage: React.FC = () => {
             sortBy,
             sortOrder,
             page,
-            limit: 50,
+            limit: 100,
           }),
           payrollService.getMySalaryStructure(),
         ]);
         if (payrollRes.status === 'fulfilled') {
           setPayrolls(payrollRes.value.payroll || []);
-          setTotalPages(payrollRes.value.totalPages || 1);
         }
         if (ssRes.status === 'fulfilled') setSalaryStructure(ssRes.value);
       } else {
@@ -210,7 +208,6 @@ export const PayrollPage: React.FC = () => {
           limit: 100,
         });
         setPayrolls(res.payroll || []);
-        setTotalPages(res.totalPages || 1);
       }
     } catch {
       toast.error('Failed to load payroll records');
@@ -247,16 +244,16 @@ export const PayrollPage: React.FC = () => {
   const handleCustomMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setCustomMonth(val);
-    setSelectedMonth(val || 'ALL');
+    setSelectedMonth(val || '2026-08');
     setPage(1);
   };
 
   const handleResetFilters = () => {
-    setSelectedMonth('ALL');
+    setSelectedMonth('2026-08');
     setCustomMonth('');
     setSearchQuery('');
-    setSortBy('pay_period');
-    setSortOrder('desc');
+    setSortBy('name');
+    setSortOrder('asc');
     setPage(1);
   };
 
@@ -279,6 +276,9 @@ export const PayrollPage: React.FC = () => {
     .sort((a, b) => {
       let comparison = 0;
       switch (sortBy) {
+        case 'name':
+          comparison = `${a.first_name || ''}`.localeCompare(`${b.first_name || ''}`);
+          break;
         case 'pay_period':
           comparison = (a.pay_period || '').localeCompare(b.pay_period || '');
           break;
@@ -294,12 +294,24 @@ export const PayrollPage: React.FC = () => {
         case 'payable_days':
           comparison = Number(a.payable_days || 0) - Number(b.payable_days || 0);
           break;
-        case 'name':
-          comparison = `${a.first_name || ''}`.localeCompare(`${b.first_name || ''}`);
-          break;
       }
       return sortOrder === 'asc' ? comparison : -comparison;
     });
+
+  // Group by month when "ALL" is selected so historical records don't mix into a repeating list
+  const monthGroups = Array.from(
+    new Set(filteredAndSortedPayrolls.map((p) => p.pay_period))
+  ).map((period) => {
+    const list = filteredAndSortedPayrolls.filter((p) => p.pay_period === period);
+    const sumNet = list.reduce((acc, p) => acc + Number(p.net_salary || 0), 0);
+    const sumGross = list.reduce((acc, p) => acc + Number(p.gross_salary || 0), 0);
+    return {
+      period,
+      records: list,
+      totalNet: sumNet,
+      totalGross: sumGross,
+    };
+  });
 
   // KPI Calculations on the filtered set
   const totalNetFiltered = filteredAndSortedPayrolls.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
@@ -382,17 +394,75 @@ export const PayrollPage: React.FC = () => {
     }
   };
 
-  // Recent 6 months for quick selection pills
+  // Month selector tabs
   const quickMonths = [
-    { label: '🌟 All Months', value: 'ALL' },
-    { label: 'Current Month (2026-08)', value: '2026-08' },
+    { label: '📅 Current Month (2026-08)', value: '2026-08' },
     { label: 'Jul 2026', value: '2026-07' },
     { label: 'Jun 2026', value: '2026-06' },
     { label: 'May 2026', value: '2026-05' },
-    { label: 'Apr 2026', value: '2026-04' },
+    { label: '📁 All Months (Grouped)', value: 'ALL' },
   ];
 
-  const isFilterActive = selectedMonth !== 'ALL' || searchQuery.trim() !== '' || sortBy !== 'pay_period' || sortOrder !== 'desc';
+  const isFilterActive = selectedMonth !== '2026-08' || searchQuery.trim() !== '' || sortBy !== 'name' || sortOrder !== 'asc';
+
+  // Render Table Row Helper
+  const renderPayrollRow = (p: Payroll) => (
+    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+      {isHR && (
+        <td className="py-3 px-3">
+          <p className="font-semibold text-slate-800">{p.first_name} {p.last_name}</p>
+          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className="font-mono">{p.employee_code}</span>
+            {p.department_name && <span>· {p.department_name}</span>}
+          </div>
+        </td>
+      )}
+      <td className="py-3 px-3">
+        <Badge variant="blue">{p.pay_period}</Badge>
+      </td>
+      <td className="py-3 px-3 text-slate-700">
+        <span className="font-bold text-blue-700">
+          {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
+        </span>
+        <span className="text-slate-400 text-xs"> / {p.total_working_days || 30} d</span>
+      </td>
+      <td className="py-3 px-3 text-slate-700 font-semibold">
+        ₹{Number(p.gross_salary).toLocaleString('en-IN')}
+      </td>
+      <td className="py-3 px-3 text-red-600 font-medium">
+        -₹{Number(p.deductions).toLocaleString('en-IN')}
+      </td>
+      <td className="py-3 px-3 text-emerald-700 font-extrabold text-sm">
+        ₹{Number(p.net_salary).toLocaleString('en-IN')}
+      </td>
+      <td className="py-3 px-3 text-right">
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            id={`view-payslip-${p.id}`}
+            size="sm"
+            variant="ghost"
+            leftIcon={<Eye className="w-3.5 h-3.5" />}
+            onClick={() => openPayslip(p)}
+            className="text-xs"
+          >
+            View Payslip
+          </Button>
+          {isHR && (
+            <Button
+              id={`edit-salary-structure-${p.id}`}
+              size="sm"
+              variant="outline"
+              leftIcon={<Sliders className="w-3.5 h-3.5 text-blue-600" />}
+              onClick={() => openSalaryModalForEmployee(p)}
+              className="text-xs"
+            >
+              Structure
+            </Button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -404,7 +474,7 @@ export const PayrollPage: React.FC = () => {
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {isHR
-              ? 'Calculate attendance-driven payroll, manage salary structures, and issue payslips'
+              ? 'Calculate attendance-driven payroll, view month-wise personnel ledger, and issue payslips'
               : 'View monthly attendance-based salary calculations, filter by month, and download payslips'
             }
           </p>
@@ -465,11 +535,11 @@ export const PayrollPage: React.FC = () => {
       {/* Month-Wise Filter & Sort Control Toolbar */}
       <Card className="bg-white border border-stone-200/90 shadow-xs">
         <div className="space-y-4">
-          {/* Row 1: Quick Month Pills */}
+          {/* Row 1: Quick Month Selector Pills */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
             <div className="flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Month Filter:</span>
+              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Month View:</span>
             </div>
 
             <div className="flex flex-wrap items-center gap-1.5">
@@ -481,7 +551,7 @@ export const PayrollPage: React.FC = () => {
                     id={`payroll-month-pill-${m.value}`}
                     type="button"
                     onClick={() => handleMonthPillClick(m.value)}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
                       isActive
                         ? 'bg-blue-600 text-white shadow-xs'
                         : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
@@ -514,7 +584,7 @@ export const PayrollPage: React.FC = () => {
             <div className="flex-1 max-w-sm">
               <Input
                 id="payroll-search-input"
-                placeholder={isHR ? 'Search employee, code, department, month...' : 'Search by pay period (e.g. 2026-08)...'}
+                placeholder={isHR ? 'Search employee, code, department...' : 'Search pay period...'}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 leftIcon={<Search className="w-3.5 h-3.5 text-slate-400" />}
@@ -537,15 +607,15 @@ export const PayrollPage: React.FC = () => {
                   }}
                   className="bg-transparent text-xs font-bold text-blue-700 focus:outline-none cursor-pointer py-0.5"
                 >
-                  <option value="pay_period_desc">📅 Period (Newest First)</option>
-                  <option value="pay_period_asc">📅 Period (Oldest First)</option>
+                  {isHR && <option value="name_asc">👤 Employee Name (A - Z)</option>}
+                  {isHR && <option value="name_desc">👤 Employee Name (Z - A)</option>}
                   <option value="net_salary_desc">💰 Net Salary (High to Low)</option>
                   <option value="net_salary_asc">💰 Net Salary (Low to High)</option>
                   <option value="payable_days_desc">⏱️ Payable Days (Most Worked)</option>
                   <option value="payable_days_asc">⏱️ Payable Days (Least Worked)</option>
                   <option value="gross_salary_desc">📊 Gross Salary (High to Low)</option>
-                  {isHR && <option value="name_asc">👤 Employee Name (A - Z)</option>}
-                  {isHR && <option value="name_desc">👤 Employee Name (Z - A)</option>}
+                  <option value="pay_period_desc">📅 Period (Newest First)</option>
+                  <option value="pay_period_asc">📅 Period (Oldest First)</option>
                 </select>
               </div>
 
@@ -573,7 +643,9 @@ export const PayrollPage: React.FC = () => {
           <p className="text-xl font-extrabold text-emerald-900 mt-1">
             ₹{totalNetFiltered.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[10px] text-emerald-700 mt-0.5">Across {filteredAndSortedPayrolls.length} payslip(s)</p>
+          <p className="text-[10px] text-emerald-700 mt-0.5">
+            {selectedMonth !== 'ALL' ? `For month ${selectedMonth}` : `Across all ${filteredAndSortedPayrolls.length} payslips`}
+          </p>
         </div>
 
         <div className="p-3.5 bg-blue-50/60 border border-blue-200/80 rounded-2xl">
@@ -587,7 +659,7 @@ export const PayrollPage: React.FC = () => {
         <div className="p-3.5 bg-purple-50/60 border border-purple-200/80 rounded-2xl">
           <p className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Avg Payable Days</p>
           <p className="text-xl font-extrabold text-purple-900 mt-1">{avgPayableDays} Days</p>
-          <p className="text-[10px] text-purple-700 mt-0.5">Per payroll month</p>
+          <p className="text-[10px] text-purple-700 mt-0.5">Per payroll record</p>
         </div>
 
         <div className="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-2xl">
@@ -599,18 +671,26 @@ export const PayrollPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Payroll Records Table */}
+      {/* Main Payroll Table: Month-Wise View or Grouped View */}
       <Card>
         <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-bold text-slate-800">
-                {isHR ? 'All Employees Payroll Ledger' : 'My Payroll History'}
+                {isHR
+                  ? selectedMonth !== 'ALL'
+                    ? `Payroll Ledger for ${selectedMonth}`
+                    : 'All Historical Payroll (Grouped Month-by-Month)'
+                  : `My Payslips — ${selectedMonth !== 'ALL' ? selectedMonth : 'All Months'}`}
               </h3>
-              <Badge variant="blue">{filteredAndSortedPayrolls.length} Payslip{filteredAndSortedPayrolls.length !== 1 ? 's' : ''}</Badge>
+              <Badge variant="blue">
+                {filteredAndSortedPayrolls.length} Employee{filteredAndSortedPayrolls.length !== 1 ? 's' : ''}
+              </Badge>
             </div>
             <p className="text-xs text-slate-500 mt-0.5">
-              Click table headers to toggle sorting order · Select periods above to filter by month
+              {selectedMonth !== 'ALL'
+                ? `Showing employees for month ${selectedMonth}. Click other month tabs above to change period.`
+                : 'Grouped by payroll month with distinct monthly subtotals.'}
             </p>
           </div>
         </div>
@@ -620,155 +700,134 @@ export const PayrollPage: React.FC = () => {
         ) : filteredAndSortedPayrolls.length === 0 ? (
           <EmptyState
             icon={<DollarSign className="w-10 h-10" />}
-            title="No payroll records found"
-            description={isFilterActive ? "No payslips match your active month filter or search query." : "No payroll has been computed yet."}
-            action={isFilterActive ? (
-              <Button size="sm" variant="outline" onClick={handleResetFilters} leftIcon={<RotateCcw className="w-3.5 h-3.5" />}>
-                Clear All Filters
-              </Button>
-            ) : undefined}
+            title={`No payroll records found for ${selectedMonth}`}
+            description={
+              isFilterActive
+                ? `No payslips match your query for month ${selectedMonth}.`
+                : "No payroll has been computed yet for this period."
+            }
+            action={
+              isFilterActive ? (
+                <Button size="sm" variant="outline" onClick={handleResetFilters} leftIcon={<RotateCcw className="w-3.5 h-3.5" />}>
+                  Reset to Current Month
+                </Button>
+              ) : undefined
+            }
           />
+        ) : selectedMonth !== 'ALL' ? (
+          /* Single Month Table: Each employee appears exactly ONCE */
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50/50">
+                  {isHR && (
+                    <th
+                      onClick={() => handleSortChange('name')}
+                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 rounded-l-lg transition-colors"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>Employee</span>
+                        {sortBy === 'name' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                      </div>
+                    </th>
+                  )}
+                  <th
+                    onClick={() => handleSortChange('pay_period')}
+                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Period</span>
+                      {sortBy === 'pay_period' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSortChange('payable_days')}
+                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Payable Days</span>
+                      {sortBy === 'payable_days' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSortChange('gross_salary')}
+                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Gross Earned</span>
+                      {sortBy === 'gross_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSortChange('deductions')}
+                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Deductions</span>
+                      {sortBy === 'deductions' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                    </div>
+                  </th>
+                  <th
+                    onClick={() => handleSortChange('net_salary')}
+                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="flex items-center gap-1">
+                      <span>Net Disbursed</span>
+                      {sortBy === 'net_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
+                    </div>
+                  </th>
+                  <th className="text-right py-3 px-3 text-xs font-bold text-slate-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredAndSortedPayrolls.map((p) => renderPayrollRow(p))}
+              </tbody>
+            </table>
+          </div>
         ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50/50">
-                    {isHR && (
-                      <th
-                        onClick={() => handleSortChange('name')}
-                        className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 rounded-l-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-1">
-                          <span>Employee</span>
-                          {sortBy === 'name' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                        </div>
-                      </th>
-                    )}
-                    <th
-                      onClick={() => handleSortChange('pay_period')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Pay Period</span>
-                        {sortBy === 'pay_period' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSortChange('payable_days')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Payable Days</span>
-                        {sortBy === 'payable_days' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSortChange('gross_salary')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Gross Earned</span>
-                        {sortBy === 'gross_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSortChange('deductions')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Deductions</span>
-                        {sortBy === 'deductions' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                    <th
-                      onClick={() => handleSortChange('net_salary')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Net Disbursed</span>
-                        {sortBy === 'net_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                    <th className="text-right py-3 px-3 text-xs font-bold text-slate-600">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredAndSortedPayrolls.map((p) => (
-                    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-                      {isHR && (
-                        <td className="py-3 px-3">
-                          <p className="font-semibold text-slate-800">{p.first_name} {p.last_name}</p>
-                          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-                            <span>{p.employee_code}</span>
-                            {p.department_name && <span>· {p.department_name}</span>}
-                          </div>
-                        </td>
-                      )}
-                      <td className="py-3 px-3">
-                        <Badge variant="blue">{p.pay_period}</Badge>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700">
-                        <span className="font-bold text-blue-700">
-                          {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
-                        </span>
-                        <span className="text-slate-400 text-xs"> / {p.total_working_days || 30} d</span>
-                      </td>
-                      <td className="py-3 px-3 text-slate-700 font-semibold">
-                        ₹{Number(p.gross_salary).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-3 text-red-600 font-medium">
-                        -₹{Number(p.deductions).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-3 text-emerald-700 font-extrabold text-sm">
-                        ₹{Number(p.net_salary).toLocaleString('en-IN')}
-                      </td>
-                      <td className="py-3 px-3 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button
-                            id={`view-payslip-${p.id}`}
-                            size="sm"
-                            variant="ghost"
-                            leftIcon={<Eye className="w-3.5 h-3.5" />}
-                            onClick={() => openPayslip(p)}
-                            className="text-xs"
-                          >
-                            View Payslip
-                          </Button>
-                          {isHR && (
-                            <Button
-                              id={`edit-salary-structure-${p.id}`}
-                              size="sm"
-                              variant="outline"
-                              leftIcon={<Sliders className="w-3.5 h-3.5 text-blue-600" />}
-                              onClick={() => openSalaryModalForEmployee(p)}
-                              className="text-xs"
-                            >
-                              Structure
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          /* Grouped by Month View when "ALL" is selected */
+          <div className="space-y-6">
+            {monthGroups.map((group) => (
+              <div key={group.period} className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
+                {/* Month Group Header */}
+                <div className="p-3.5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <Layers className="w-4 h-4 text-blue-400" />
+                    <span className="font-extrabold text-sm tracking-wide">Pay Period: {group.period}</span>
+                    <span className="px-2 py-0.5 text-[11px] font-bold bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
+                      {group.records.length} Employee{group.records.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-slate-300">Total Net Disbursed:</span>
+                    <span className="font-extrabold text-emerald-400 text-sm">
+                      ₹{group.totalNet.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
 
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-200">
-                <p className="text-sm text-slate-500">Page {page} of {totalPages}</p>
-                <div className="flex gap-2">
-                  <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
+                {/* Table for this Month */}
+                <div className="overflow-x-auto bg-white">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50/60 text-xs font-semibold text-slate-600">
+                        {isHR && <th className="text-left py-2.5 px-3">Employee</th>}
+                        <th className="text-left py-2.5 px-3">Pay Period</th>
+                        <th className="text-left py-2.5 px-3">Payable Days</th>
+                        <th className="text-left py-2.5 px-3">Gross Earned</th>
+                        <th className="text-left py-2.5 px-3">Deductions</th>
+                        <th className="text-left py-2.5 px-3">Net Disbursed</th>
+                        <th className="text-right py-2.5 px-3">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {group.records.map((p) => renderPayrollRow(p))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-            )}
-          </>
+            ))}
+          </div>
         )}
       </Card>
 
