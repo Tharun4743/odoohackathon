@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
   DollarSign, Download, Printer, Plus,
-  Calendar, Sliders, Search, Eye, ArrowUpDown, ArrowUp, ArrowDown,
-  RotateCcw, Layers
+  Calendar, Sliders, Search, Eye,
+  ChevronDown, ChevronUp, User
 } from 'lucide-react';
 import { payrollService } from '../services/payrollService';
 import { employeeService } from '../services/employeeService';
@@ -148,8 +148,18 @@ const PayslipContent = React.forwardRef<HTMLDivElement, { payslip: Payroll }>(({
 });
 PayslipContent.displayName = 'PayslipContent';
 
-type SortField = 'pay_period' | 'net_salary' | 'gross_salary' | 'payable_days' | 'deductions' | 'name';
-type SortOrder = 'asc' | 'desc';
+interface EmployeePayrollGroup {
+  employeeId: string;
+  employeeCode: string;
+  firstName: string;
+  lastName: string;
+  departmentName: string;
+  basicSalary: number;
+  allowances: number;
+  totalNetPaid: number;
+  totalGrossPaid: number;
+  payslips: Payroll[];
+}
 
 export const PayrollPage: React.FC = () => {
   const { user } = useAuth();
@@ -158,16 +168,13 @@ export const PayrollPage: React.FC = () => {
   const [payrolls, setPayrolls] = useState<Payroll[]>([]);
   const [salaryStructure, setSalaryStructure] = useState<SalaryStructure | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [page, setPage] = useState(1);
   const [payslipModal, setPayslipModal] = useState<Payroll | null>(null);
   const [payslipData, setPayslipData] = useState<Payroll | null>(null);
 
-  // Filtering & Sorting State (Defaulting to Current Month 2026-08 so each employee appears only once)
-  const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
-  const [customMonth, setCustomMonth] = useState<string>('');
+  // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [sortBy, setSortBy] = useState<SortField>('name');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [monthFilter, setMonthFilter] = useState<string>('ALL');
+  const [expandedEmployees, setExpandedEmployees] = useState<Record<string, boolean>>({});
 
   // HR Modal states
   const [salaryModal, setSalaryModal] = useState(false);
@@ -183,16 +190,9 @@ export const PayrollPage: React.FC = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const activeMonth = selectedMonth !== 'ALL' ? selectedMonth : undefined;
       if (!isHR) {
         const [payrollRes, ssRes] = await Promise.allSettled([
-          payrollService.getMyPayroll({
-            pay_period: activeMonth,
-            sortBy,
-            sortOrder,
-            page,
-            limit: 100,
-          }),
+          payrollService.getMyPayroll({ limit: 100 }),
           payrollService.getMySalaryStructure(),
         ]);
         if (payrollRes.status === 'fulfilled') {
@@ -200,13 +200,7 @@ export const PayrollPage: React.FC = () => {
         }
         if (ssRes.status === 'fulfilled') setSalaryStructure(ssRes.value);
       } else {
-        const res = await payrollService.getAllPayroll({
-          pay_period: activeMonth,
-          sortBy,
-          sortOrder,
-          page,
-          limit: 100,
-        });
+        const res = await payrollService.getAllPayroll({ limit: 200 });
         setPayrolls(res.payroll || []);
       }
     } catch {
@@ -218,7 +212,7 @@ export const PayrollPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [page, selectedMonth, sortBy, sortOrder]);
+  }, []);
 
   useEffect(() => {
     if (isHR) {
@@ -226,100 +220,76 @@ export const PayrollPage: React.FC = () => {
     }
   }, [isHR]);
 
-  const handleSortChange = (field: SortField) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('desc');
-    }
-  };
+  // Group all payroll records by unique Employee
+  const employeeGroups: EmployeePayrollGroup[] = React.useMemo(() => {
+    const map = new Map<string, EmployeePayrollGroup>();
 
-  const handleMonthPillClick = (month: string) => {
-    setSelectedMonth(month);
-    setCustomMonth(month === 'ALL' ? '' : month);
-    setPage(1);
-  };
-
-  const handleCustomMonthChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    setCustomMonth(val);
-    setSelectedMonth(val || '2026-08');
-    setPage(1);
-  };
-
-  const handleResetFilters = () => {
-    setSelectedMonth('2026-08');
-    setCustomMonth('');
-    setSearchQuery('');
-    setSortBy('name');
-    setSortOrder('asc');
-    setPage(1);
-  };
-
-  // Client-side filtering & sorting for smooth instant interactions
-  const filteredAndSortedPayrolls = payrolls
-    .filter((p) => {
-      // 1. Month filter
-      if (selectedMonth !== 'ALL' && p.pay_period !== selectedMonth) {
-        return false;
+    payrolls.forEach((p) => {
+      const empId = p.employee_id;
+      if (!map.has(empId)) {
+        map.set(empId, {
+          employeeId: empId,
+          employeeCode: p.employee_code || 'EMP',
+          firstName: p.first_name || '',
+          lastName: p.last_name || '',
+          departmentName: p.department_name || 'General',
+          basicSalary: Number(p.basic_salary || 0),
+          allowances: Number(p.allowances || 0),
+          totalNetPaid: 0,
+          totalGrossPaid: 0,
+          payslips: [],
+        });
       }
-      // 2. Search query filter
-      if (!searchQuery.trim()) return true;
-      const q = searchQuery.toLowerCase().trim();
-      const fullName = `${p.first_name || ''} ${p.last_name || ''}`.toLowerCase();
-      const code = (p.employee_code || '').toLowerCase();
-      const dept = (p.department_name || '').toLowerCase();
-      const period = (p.pay_period || '').toLowerCase();
-      return fullName.includes(q) || code.includes(q) || dept.includes(q) || period.includes(q);
-    })
-    .sort((a, b) => {
-      let comparison = 0;
-      switch (sortBy) {
-        case 'name':
-          comparison = `${a.first_name || ''}`.localeCompare(`${b.first_name || ''}`);
-          break;
-        case 'pay_period':
-          comparison = (a.pay_period || '').localeCompare(b.pay_period || '');
-          break;
-        case 'net_salary':
-          comparison = Number(a.net_salary || 0) - Number(b.net_salary || 0);
-          break;
-        case 'gross_salary':
-          comparison = Number(a.gross_salary || 0) - Number(b.gross_salary || 0);
-          break;
-        case 'deductions':
-          comparison = Number(a.deductions || 0) - Number(b.deductions || 0);
-          break;
-        case 'payable_days':
-          comparison = Number(a.payable_days || 0) - Number(b.payable_days || 0);
-          break;
-      }
-      return sortOrder === 'asc' ? comparison : -comparison;
+      const group = map.get(empId)!;
+      group.payslips.push(p);
+      group.totalNetPaid += Number(p.net_salary || 0);
+      group.totalGrossPaid += Number(p.gross_salary || 0);
     });
 
-  // Group by month when "ALL" is selected so historical records don't mix into a repeating list
-  const monthGroups = Array.from(
-    new Set(filteredAndSortedPayrolls.map((p) => p.pay_period))
-  ).map((period) => {
-    const list = filteredAndSortedPayrolls.filter((p) => p.pay_period === period);
-    const sumNet = list.reduce((acc, p) => acc + Number(p.net_salary || 0), 0);
-    const sumGross = list.reduce((acc, p) => acc + Number(p.gross_salary || 0), 0);
-    return {
-      period,
-      records: list,
-      totalNet: sumNet,
-      totalGross: sumGross,
-    };
+    // Sort payslips inside each employee by pay_period descending (newest month first)
+    map.forEach((g) => {
+      g.payslips.sort((a, b) => (b.pay_period || '').localeCompare(a.pay_period || ''));
+    });
+
+    return Array.from(map.values()).sort((a, b) =>
+      `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
+    );
+  }, [payrolls]);
+
+  // Filtered employee groups based on search & month filter
+  const filteredEmployeeGroups = employeeGroups.filter((g) => {
+    // Search query
+    const q = searchQuery.toLowerCase().trim();
+    const fullName = `${g.firstName} ${g.lastName}`.toLowerCase();
+    const code = g.employeeCode.toLowerCase();
+    const dept = g.departmentName.toLowerCase();
+    const matchesSearch = !q || fullName.includes(q) || code.includes(q) || dept.includes(q);
+
+    if (!matchesSearch) return false;
+
+    // Month filter
+    if (monthFilter !== 'ALL') {
+      return g.payslips.some((p) => p.pay_period === monthFilter);
+    }
+    return true;
   });
 
-  // KPI Calculations on the filtered set
-  const totalNetFiltered = filteredAndSortedPayrolls.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
-  const totalGrossFiltered = filteredAndSortedPayrolls.reduce((sum, p) => sum + Number(p.gross_salary || 0), 0);
-  const totalDeductionsFiltered = filteredAndSortedPayrolls.reduce((sum, p) => sum + Number(p.deductions || 0), 0);
-  const avgPayableDays = filteredAndSortedPayrolls.length > 0
-    ? (filteredAndSortedPayrolls.reduce((sum, p) => sum + Number(p.payable_days || 30), 0) / filteredAndSortedPayrolls.length).toFixed(1)
-    : '0';
+  const toggleExpand = (empId: string) => {
+    setExpandedEmployees((prev) => ({
+      ...prev,
+      [empId]: !prev[empId],
+    }));
+  };
+
+  const handleExpandAll = () => {
+    const next: Record<string, boolean> = {};
+    filteredEmployeeGroups.forEach((g) => { next[g.employeeId] = true; });
+    setExpandedEmployees(next);
+  };
+
+  const handleCollapseAll = () => {
+    setExpandedEmployees({});
+  };
 
   const openPayslip = async (payroll: Payroll) => {
     try {
@@ -331,15 +301,24 @@ export const PayrollPage: React.FC = () => {
     }
   };
 
-  const openSalaryModalForEmployee = (p: Payroll) => {
+  const openSalaryModalForEmployee = (g: EmployeePayrollGroup) => {
+    const latest = g.payslips[0];
     setSalaryForm({
-      employeeId: p.employee_id,
-      basic_salary: String(p.basic_salary || ''),
-      allowances: String(p.allowances || ''),
-      deductions: String(p.salary_deductions || p.deductions || ''),
+      employeeId: g.employeeId,
+      basic_salary: String(latest?.basic_salary || g.basicSalary || ''),
+      allowances: String(latest?.allowances || g.allowances || ''),
+      deductions: String(latest?.salary_deductions || latest?.deductions || '0'),
       effective_from: new Date().toISOString().split('T')[0],
     });
     setSalaryModal(true);
+  };
+
+  const openGenerateModalForEmployee = (g: EmployeePayrollGroup) => {
+    setGenerateForm({
+      employeeId: g.employeeId,
+      pay_period: '2026-08',
+    });
+    setGenerateModal(true);
   };
 
   const handleExportPDF = () => {
@@ -367,7 +346,6 @@ export const PayrollPage: React.FC = () => {
       });
       toast.success('Salary structure updated successfully! Future payroll will reflect these changes.');
       setSalaryModal(false);
-      setSalaryForm({ employeeId: '', basic_salary: '', allowances: '', deductions: '', effective_from: '' });
       fetchData();
     } catch (err: unknown) {
       toast.error((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Failed to save salary structure');
@@ -394,88 +372,25 @@ export const PayrollPage: React.FC = () => {
     }
   };
 
-  // Month selector tabs
-  const quickMonths = [
-    { label: '📅 Current Month (2026-08)', value: '2026-08' },
-    { label: 'Jul 2026', value: '2026-07' },
-    { label: 'Jun 2026', value: '2026-06' },
-    { label: 'May 2026', value: '2026-05' },
-    { label: '📁 All Months (Grouped)', value: 'ALL' },
-  ];
+  // Distinct available months across records
+  const distinctMonths = Array.from(new Set(payrolls.map((p) => p.pay_period))).sort().reverse();
 
-  const isFilterActive = selectedMonth !== '2026-08' || searchQuery.trim() !== '' || sortBy !== 'name' || sortOrder !== 'asc';
-
-  // Render Table Row Helper
-  const renderPayrollRow = (p: Payroll) => (
-    <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
-      {isHR && (
-        <td className="py-3 px-3">
-          <p className="font-semibold text-slate-800">{p.first_name} {p.last_name}</p>
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-500">
-            <span className="font-mono">{p.employee_code}</span>
-            {p.department_name && <span>· {p.department_name}</span>}
-          </div>
-        </td>
-      )}
-      <td className="py-3 px-3">
-        <Badge variant="blue">{p.pay_period}</Badge>
-      </td>
-      <td className="py-3 px-3 text-slate-700">
-        <span className="font-bold text-blue-700">
-          {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
-        </span>
-        <span className="text-slate-400 text-xs"> / {p.total_working_days || 30} d</span>
-      </td>
-      <td className="py-3 px-3 text-slate-700 font-semibold">
-        ₹{Number(p.gross_salary).toLocaleString('en-IN')}
-      </td>
-      <td className="py-3 px-3 text-red-600 font-medium">
-        -₹{Number(p.deductions).toLocaleString('en-IN')}
-      </td>
-      <td className="py-3 px-3 text-emerald-700 font-extrabold text-sm">
-        ₹{Number(p.net_salary).toLocaleString('en-IN')}
-      </td>
-      <td className="py-3 px-3 text-right">
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            id={`view-payslip-${p.id}`}
-            size="sm"
-            variant="ghost"
-            leftIcon={<Eye className="w-3.5 h-3.5" />}
-            onClick={() => openPayslip(p)}
-            className="text-xs"
-          >
-            View Payslip
-          </Button>
-          {isHR && (
-            <Button
-              id={`edit-salary-structure-${p.id}`}
-              size="sm"
-              variant="outline"
-              leftIcon={<Sliders className="w-3.5 h-3.5 text-blue-600" />}
-              onClick={() => openSalaryModalForEmployee(p)}
-              className="text-xs"
-            >
-              Structure
-            </Button>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
+  // Grand totals across all records
+  const grandTotalNet = payrolls.reduce((sum, p) => sum + Number(p.net_salary || 0), 0);
+  const grandTotalGross = payrolls.reduce((sum, p) => sum + Number(p.gross_salary || 0), 0);
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
+      {/* Page Title & Top Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-800">
-            {isHR ? 'Payroll & Payslip Administration' : 'My Salary & Payslips'}
+            {isHR ? 'Employee Payroll Directory (Month-Wise Records)' : 'My Salary & Payslip History'}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
             {isHR
-              ? 'Calculate attendance-driven payroll, view month-wise personnel ledger, and issue payslips'
-              : 'View monthly attendance-based salary calculations, filter by month, and download payslips'
+              ? 'List of all personnel with month-by-month attendance-driven salary computations and payslips'
+              : 'View your attendance-driven monthly salary computations and download official payslips'
             }
           </p>
         </div>
@@ -497,13 +412,13 @@ export const PayrollPage: React.FC = () => {
               leftIcon={<DollarSign className="w-3.5 h-3.5" />}
               onClick={() => setGenerateModal(true)}
             >
-              Generate Monthly Payroll
+              Compute Monthly Payroll
             </Button>
           </div>
         )}
       </div>
 
-      {/* Base Salary Structure (Employee Only) */}
+      {/* Base Salary Structure (Employee Only View) */}
       {!isHR && salaryStructure && (
         <Card className="border-l-4 border-l-blue-600">
           <div className="flex items-center justify-between mb-3">
@@ -532,304 +447,247 @@ export const PayrollPage: React.FC = () => {
         </Card>
       )}
 
-      {/* Month-Wise Filter & Sort Control Toolbar */}
-      <Card className="bg-white border border-stone-200/90 shadow-xs">
-        <div className="space-y-4">
-          {/* Row 1: Quick Month Selector Pills */}
-          <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-slate-100">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Active Month View:</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-1.5">
-              {quickMonths.map((m) => {
-                const isActive = selectedMonth === m.value;
-                return (
-                  <button
-                    key={m.value}
-                    id={`payroll-month-pill-${m.value}`}
-                    type="button"
-                    onClick={() => handleMonthPillClick(m.value)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
-                      isActive
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
-                    }`}
-                  >
-                    {m.label}
-                  </button>
-                );
-              })}
-
-              {/* Custom Month Picker */}
-              <div className="flex items-center gap-1 pl-1 border-l border-slate-200">
-                <label htmlFor="custom-month-input" className="text-[11px] font-bold text-slate-500 whitespace-nowrap">
-                  Custom:
-                </label>
-                <input
-                  id="custom-month-input"
-                  type="month"
-                  value={customMonth}
-                  onChange={handleCustomMonthChange}
-                  className="px-2 py-1 text-xs font-medium border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Row 2: Search, Sort Dropdown & Reset */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="flex-1 max-w-sm">
-              <Input
-                id="payroll-search-input"
-                placeholder={isHR ? 'Search employee, code, department...' : 'Search pay period...'}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                leftIcon={<Search className="w-3.5 h-3.5 text-slate-400" />}
-                className="py-1.5 text-xs"
-              />
-            </div>
-
-            {/* Sort Dropdown */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1">
-                <ArrowUpDown className="w-3.5 h-3.5 text-slate-500" />
-                <span className="text-xs font-bold text-slate-600">Sort By:</span>
-                <select
-                  id="payroll-sort-select"
-                  value={`${sortBy}_${sortOrder}`}
-                  onChange={(e) => {
-                    const [field, order] = e.target.value.split('_') as [SortField, SortOrder];
-                    setSortBy(field);
-                    setSortOrder(order);
-                  }}
-                  className="bg-transparent text-xs font-bold text-blue-700 focus:outline-none cursor-pointer py-0.5"
-                >
-                  {isHR && <option value="name_asc">👤 Employee Name (A - Z)</option>}
-                  {isHR && <option value="name_desc">👤 Employee Name (Z - A)</option>}
-                  <option value="net_salary_desc">💰 Net Salary (High to Low)</option>
-                  <option value="net_salary_asc">💰 Net Salary (Low to High)</option>
-                  <option value="payable_days_desc">⏱️ Payable Days (Most Worked)</option>
-                  <option value="payable_days_asc">⏱️ Payable Days (Least Worked)</option>
-                  <option value="gross_salary_desc">📊 Gross Salary (High to Low)</option>
-                  <option value="pay_period_desc">📅 Period (Newest First)</option>
-                  <option value="pay_period_asc">📅 Period (Oldest First)</option>
-                </select>
-              </div>
-
-              {isFilterActive && (
-                <Button
-                  id="reset-payroll-filters-btn"
-                  size="sm"
-                  variant="ghost"
-                  leftIcon={<RotateCcw className="w-3.5 h-3.5 text-slate-500" />}
-                  onClick={handleResetFilters}
-                  className="text-xs text-slate-600 hover:text-slate-900"
-                >
-                  Reset
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Filtered Monthly Financial Summary Strip */}
+      {/* Summary KPI Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="p-3.5 bg-emerald-50/60 border border-emerald-200/80 rounded-2xl">
+        <div className="p-3.5 bg-blue-50/70 border border-blue-200/80 rounded-2xl">
+          <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Total Personnel Enrolled</p>
+          <p className="text-xl font-extrabold text-blue-900 mt-1">{employeeGroups.length} Employees</p>
+          <p className="text-[10px] text-blue-700 mt-0.5">Unique team members</p>
+        </div>
+
+        <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl">
           <p className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider">Total Net Disbursed</p>
           <p className="text-xl font-extrabold text-emerald-900 mt-1">
-            ₹{totalNetFiltered.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+            ₹{grandTotalNet.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[10px] text-emerald-700 mt-0.5">
-            {selectedMonth !== 'ALL' ? `For month ${selectedMonth}` : `Across all ${filteredAndSortedPayrolls.length} payslips`}
-          </p>
+          <p className="text-[10px] text-emerald-700 mt-0.5">Across {payrolls.length} total monthly payslips</p>
         </div>
 
-        <div className="p-3.5 bg-blue-50/60 border border-blue-200/80 rounded-2xl">
-          <p className="text-[11px] font-bold text-blue-800 uppercase tracking-wider">Total Gross Earned</p>
-          <p className="text-xl font-extrabold text-blue-900 mt-1">
-            ₹{totalGrossFiltered.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+        <div className="p-3.5 bg-purple-50/70 border border-purple-200/80 rounded-2xl">
+          <p className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Total Gross Accrued</p>
+          <p className="text-xl font-extrabold text-purple-900 mt-1">
+            ₹{grandTotalGross.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
           </p>
-          <p className="text-[10px] text-blue-700 mt-0.5">Attendance-adjusted gross</p>
+          <p className="text-[10px] text-purple-700 mt-0.5">Attendance-earned gross</p>
         </div>
 
-        <div className="p-3.5 bg-purple-50/60 border border-purple-200/80 rounded-2xl">
-          <p className="text-[11px] font-bold text-purple-800 uppercase tracking-wider">Avg Payable Days</p>
-          <p className="text-xl font-extrabold text-purple-900 mt-1">{avgPayableDays} Days</p>
-          <p className="text-[10px] text-purple-700 mt-0.5">Per payroll record</p>
-        </div>
-
-        <div className="p-3.5 bg-rose-50/60 border border-rose-200/80 rounded-2xl">
-          <p className="text-[11px] font-bold text-rose-800 uppercase tracking-wider">Total Deductions</p>
-          <p className="text-xl font-extrabold text-rose-900 mt-1">
-            -₹{totalDeductionsFiltered.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-          </p>
-          <p className="text-[10px] text-rose-700 mt-0.5">Tax & attendance adjustments</p>
+        <div className="p-3.5 bg-amber-50/70 border border-amber-200/80 rounded-2xl">
+          <p className="text-[11px] font-bold text-amber-800 uppercase tracking-wider">Active Pay Periods</p>
+          <p className="text-xl font-extrabold text-amber-900 mt-1">{distinctMonths.length} Months</p>
+          <p className="text-[10px] text-amber-700 mt-0.5">Historical payroll cycles</p>
         </div>
       </div>
 
-      {/* Main Payroll Table: Month-Wise View or Grouped View */}
-      <Card>
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-slate-800">
-                {isHR
-                  ? selectedMonth !== 'ALL'
-                    ? `Payroll Ledger for ${selectedMonth}`
-                    : 'All Historical Payroll (Grouped Month-by-Month)'
-                  : `My Payslips — ${selectedMonth !== 'ALL' ? selectedMonth : 'All Months'}`}
-              </h3>
-              <Badge variant="blue">
-                {filteredAndSortedPayrolls.length} Employee{filteredAndSortedPayrolls.length !== 1 ? 's' : ''}
-              </Badge>
+      {/* Filter & Search Bar */}
+      <Card className="bg-white border border-stone-200 shadow-xs">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Search by Employee Name or Code */}
+          <div className="flex-1 max-w-md">
+            <Input
+              id="payroll-employee-search"
+              placeholder="Search employee by name, code, or department..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              leftIcon={<Search className="w-4 h-4 text-slate-400" />}
+              className="text-xs"
+            />
+          </div>
+
+          {/* Month Scope Filter */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-2.5 py-1.5">
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
+              <span className="text-xs font-bold text-slate-600">Month Filter:</span>
+              <select
+                id="payroll-month-filter"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="bg-transparent text-xs font-bold text-blue-700 focus:outline-none cursor-pointer"
+              >
+                <option value="ALL">🌟 All Months</option>
+                {distinctMonths.map((m) => (
+                  <option key={m} value={m}>📅 {m}</option>
+                ))}
+              </select>
             </div>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {selectedMonth !== 'ALL'
-                ? `Showing employees for month ${selectedMonth}. Click other month tabs above to change period.`
-                : 'Grouped by payroll month with distinct monthly subtotals.'}
-            </p>
+
+            {/* Expand / Collapse All */}
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={Object.keys(expandedEmployees).length > 0 ? handleCollapseAll : handleExpandAll}
+              className="text-xs text-slate-600 hover:text-slate-900"
+            >
+              {Object.keys(expandedEmployees).length > 0 ? 'Collapse All' : 'Expand All'}
+            </Button>
           </div>
         </div>
+      </Card>
 
+      {/* Main Employee Accordion List (Unique Names with Month-Wise Details Inside) */}
+      <div className="space-y-4">
         {isLoading ? (
           <Loader className="h-32" />
-        ) : filteredAndSortedPayrolls.length === 0 ? (
+        ) : filteredEmployeeGroups.length === 0 ? (
           <EmptyState
-            icon={<DollarSign className="w-10 h-10" />}
-            title={`No payroll records found for ${selectedMonth}`}
-            description={
-              isFilterActive
-                ? `No payslips match your query for month ${selectedMonth}.`
-                : "No payroll has been computed yet for this period."
-            }
-            action={
-              isFilterActive ? (
-                <Button size="sm" variant="outline" onClick={handleResetFilters} leftIcon={<RotateCcw className="w-3.5 h-3.5" />}>
-                  Reset to Current Month
-                </Button>
-              ) : undefined
-            }
+            icon={<User className="w-10 h-10 text-slate-400" />}
+            title="No employee payroll records found"
+            description={searchQuery || monthFilter !== 'ALL' ? "No records match your search query or selected month filter." : "No payroll records have been generated yet."}
           />
-        ) : selectedMonth !== 'ALL' ? (
-          /* Single Month Table: Each employee appears exactly ONCE */
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50/50">
-                  {isHR && (
-                    <th
-                      onClick={() => handleSortChange('name')}
-                      className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 rounded-l-lg transition-colors"
-                    >
-                      <div className="flex items-center gap-1">
-                        <span>Employee</span>
-                        {sortBy === 'name' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                      </div>
-                    </th>
-                  )}
-                  <th
-                    onClick={() => handleSortChange('pay_period')}
-                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Period</span>
-                      {sortBy === 'pay_period' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSortChange('payable_days')}
-                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Payable Days</span>
-                      {sortBy === 'payable_days' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSortChange('gross_salary')}
-                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Gross Earned</span>
-                      {sortBy === 'gross_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSortChange('deductions')}
-                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Deductions</span>
-                      {sortBy === 'deductions' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                    </div>
-                  </th>
-                  <th
-                    onClick={() => handleSortChange('net_salary')}
-                    className="text-left py-3 px-3 text-xs font-bold text-slate-600 cursor-pointer select-none hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="flex items-center gap-1">
-                      <span>Net Disbursed</span>
-                      {sortBy === 'net_salary' ? (sortOrder === 'asc' ? <ArrowUp className="w-3.5 h-3.5 text-blue-600" /> : <ArrowDown className="w-3.5 h-3.5 text-blue-600" />) : <ArrowUpDown className="w-3 h-3 text-slate-400 opacity-50" />}
-                    </div>
-                  </th>
-                  <th className="text-right py-3 px-3 text-xs font-bold text-slate-600">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredAndSortedPayrolls.map((p) => renderPayrollRow(p))}
-              </tbody>
-            </table>
-          </div>
         ) : (
-          /* Grouped by Month View when "ALL" is selected */
-          <div className="space-y-6">
-            {monthGroups.map((group) => (
-              <div key={group.period} className="border border-slate-200 rounded-2xl overflow-hidden shadow-xs">
-                {/* Month Group Header */}
-                <div className="p-3.5 bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <Layers className="w-4 h-4 text-blue-400" />
-                    <span className="font-extrabold text-sm tracking-wide">Pay Period: {group.period}</span>
-                    <span className="px-2 py-0.5 text-[11px] font-bold bg-blue-500/20 text-blue-300 rounded-full border border-blue-400/30">
-                      {group.records.length} Employee{group.records.length !== 1 ? 's' : ''}
-                    </span>
+          filteredEmployeeGroups.map((group) => {
+            const isExpanded = expandedEmployees[group.employeeId] !== false; // expanded by default
+            const displayedPayslips = monthFilter === 'ALL'
+              ? group.payslips
+              : group.payslips.filter((p) => p.pay_period === monthFilter);
+
+            return (
+              <div
+                key={group.employeeId}
+                className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs hover:border-slate-300 transition-all"
+              >
+                {/* Employee Master Row Header */}
+                <div
+                  onClick={() => toggleExpand(group.employeeId)}
+                  className="p-4 cursor-pointer select-none bg-slate-50/60 hover:bg-slate-100/70 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors"
+                >
+                  <div className="flex items-center gap-3.5">
+                    <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-800 flex items-center justify-center font-black text-sm border border-blue-200 flex-shrink-0">
+                      {group.firstName?.[0] || 'U'}{group.lastName?.[0] || ''}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-extrabold text-slate-900 text-sm">
+                          {group.firstName} {group.lastName}
+                        </h3>
+                        <span className="font-mono text-xs font-bold text-slate-600 bg-white px-2 py-0.5 rounded border border-slate-200">
+                          {group.employeeCode}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          · {group.departmentName}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Base Structure: <strong className="text-slate-700">₹{(group.basicSalary + group.allowances).toLocaleString('en-IN')}</strong> / month · {group.payslips.length} Monthly Payslip{group.payslips.length !== 1 ? 's' : ''} on record
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-300">Total Net Disbursed:</span>
-                    <span className="font-extrabold text-emerald-400 text-sm">
-                      ₹{group.totalNet.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
-                    </span>
+
+                  <div className="flex items-center gap-4">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-[11px] text-slate-400 font-medium uppercase tracking-wider">Total Net Paid</p>
+                      <p className="text-base font-black text-emerald-700">
+                        ₹{group.totalNetPaid.toLocaleString('en-IN', { maximumFractionDigits: 2 })}
+                      </p>
+                    </div>
+
+                    {isHR && (
+                      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          id={`structure-btn-${group.employeeId}`}
+                          size="sm"
+                          variant="outline"
+                          leftIcon={<Sliders className="w-3.5 h-3.5 text-blue-600" />}
+                          onClick={() => openSalaryModalForEmployee(group)}
+                          className="text-xs"
+                        >
+                          Structure
+                        </Button>
+                        <Button
+                          id={`generate-btn-${group.employeeId}`}
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<Plus className="w-3.5 h-3.5 text-slate-600" />}
+                          onClick={() => openGenerateModalForEmployee(group)}
+                          className="text-xs text-slate-700 hover:bg-slate-200"
+                        >
+                          Generate
+                        </Button>
+                      </div>
+                    )}
+
+                    <div className="w-7 h-7 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500">
+                      {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    </div>
                   </div>
                 </div>
 
-                {/* Table for this Month */}
-                <div className="overflow-x-auto bg-white">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 bg-slate-50/60 text-xs font-semibold text-slate-600">
-                        {isHR && <th className="text-left py-2.5 px-3">Employee</th>}
-                        <th className="text-left py-2.5 px-3">Pay Period</th>
-                        <th className="text-left py-2.5 px-3">Payable Days</th>
-                        <th className="text-left py-2.5 px-3">Gross Earned</th>
-                        <th className="text-left py-2.5 px-3">Deductions</th>
-                        <th className="text-left py-2.5 px-3">Net Disbursed</th>
-                        <th className="text-right py-2.5 px-3">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {group.records.map((p) => renderPayrollRow(p))}
-                    </tbody>
-                  </table>
-                </div>
+                {/* Month-Wise Breakdown Table Inside Employee */}
+                {isExpanded && (
+                  <div className="p-4 bg-white">
+                    <div className="mb-2.5 flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        📅 Month-Wise Salary & Attendance Computations ({displayedPayslips.length} Periods)
+                      </span>
+                    </div>
+
+                    {displayedPayslips.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400 bg-slate-50 rounded-xl">
+                        No payslips for selected month filter.
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto border border-slate-100 rounded-xl">
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="border-b border-slate-200 bg-slate-50/80 text-slate-600 font-bold">
+                              <th className="text-left py-2.5 px-3">Pay Period</th>
+                              <th className="text-left py-2.5 px-3">Payable Days</th>
+                              <th className="text-left py-2.5 px-3">Base Basic</th>
+                              <th className="text-left py-2.5 px-3">Gross Earned</th>
+                              <th className="text-left py-2.5 px-3">Deductions</th>
+                              <th className="text-left py-2.5 px-3">Net Disbursed</th>
+                              <th className="text-right py-2.5 px-3">Actions</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {displayedPayslips.map((p) => (
+                              <tr key={p.id} className="hover:bg-blue-50/40 transition-colors">
+                                <td className="py-2.5 px-3">
+                                  <Badge variant="blue">{p.pay_period}</Badge>
+                                </td>
+                                <td className="py-2.5 px-3 font-medium text-slate-700">
+                                  <span className="font-bold text-blue-700">
+                                    {p.payable_days !== undefined ? p.payable_days : p.total_working_days || 30}
+                                  </span>
+                                  <span className="text-slate-400"> / {p.total_working_days || 30} d</span>
+                                </td>
+                                <td className="py-2.5 px-3 text-slate-600">
+                                  ₹{Number(p.basic_salary || group.basicSalary).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-2.5 px-3 font-semibold text-slate-800">
+                                  ₹{Number(p.gross_salary).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-2.5 px-3 font-medium text-red-600">
+                                  -₹{Number(p.deductions).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-2.5 px-3 font-black text-emerald-700 text-sm">
+                                  ₹{Number(p.net_salary).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-2.5 px-3 text-right">
+                                  <Button
+                                    id={`view-payslip-${p.id}`}
+                                    size="sm"
+                                    variant="ghost"
+                                    leftIcon={<Eye className="w-3.5 h-3.5 text-blue-600" />}
+                                    onClick={() => openPayslip(p)}
+                                    className="text-xs text-blue-700 hover:bg-blue-50"
+                                  >
+                                    View Payslip
+                                  </Button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
+            );
+          })
         )}
-      </Card>
+      </div>
 
       {/* Payslip View Modal */}
       <Modal
