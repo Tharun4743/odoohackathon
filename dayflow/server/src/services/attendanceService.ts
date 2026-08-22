@@ -118,7 +118,7 @@ export const attendanceService = {
 
     const totalHours = (now.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
     const netWorkingHours = Math.max(0, parseFloat((totalHours - breakDuration).toFixed(2)));
-    const status = netWorkingHours >= 4 && netWorkingHours < 7 ? 'HALF_DAY' : 'PRESENT';
+    const status = netWorkingHours >= 7 ? 'PRESENT' : netWorkingHours >= 4 ? 'HALF_DAY' : 'ABSENT';
 
     const result = await query(
       `UPDATE attendance
