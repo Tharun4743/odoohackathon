@@ -8,8 +8,7 @@ import { Modal } from '../components/ui/Modal';
 import type { Payroll, Employee, SalaryStructure } from '../types';
 import { format } from 'date-fns';
 import toast from 'react-hot-toast';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { downloadPayslipPDF } from '../utils/pdfExport';
 
 const PayslipContent = React.forwardRef<HTMLDivElement, { payslip: Payroll }>(({ payslip }, ref) => {
   const totalDays = payslip.total_working_days || 30;
@@ -199,15 +198,13 @@ export const PayrollPage: React.FC = () => {
     } catch { toast.error('Failed to load payslip'); }
   };
 
-  const handleExportPDF = async () => {
-    if (!payslipRef.current) return;
-    const canvas = await html2canvas(payslipRef.current, { scale: 2 });
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'px', format: 'a4' });
-    const width = pdf.internal.pageSize.getWidth();
-    const height = (canvas.height * width) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, width, height);
-    pdf.save(`payslip-${payslipData?.pay_period}-${payslipData?.employee_code || 'emp'}.pdf`);
+  const handleExportPDF = () => {
+    const target = payslipData || payslipModal;
+    if (!target) {
+      toast.error('No payslip data loaded');
+      return;
+    }
+    downloadPayslipPDF(target);
   };
 
   const handleCreateSalary = async () => {
