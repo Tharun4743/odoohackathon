@@ -61,32 +61,30 @@
 ### Backend
 - **Node.js** + **Express** + **TypeScript**
 - **PostgreSQL / Supabase** with PG pool connection
+- **Brevo SMTP** for transactional notifications
 - **JSON Web Tokens (JWT)** + **bcryptjs** (12 salt rounds)
 - **Cloudinary SDK** + **Multer** for avatars and documents
-- **Nodemailer** for notifications
 
 ---
 
-## 🔑 Demo Accounts
+## 🔑 Team Accounts & Roles
 
-The database seed provides predefined accounts for demonstration:
-
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Admin** | `admin@dayflow.com` | `Admin@123` |
-| **HR Officer** | `hr@dayflow.com` | `Hr@123` |
-| **Employee** | `employee@dayflow.com` | `Employee@123` |
+| # | Name | Email | Password | Role | Employee Code |
+| :-: | :--- | :--- | :--- | :--- | :--- |
+| **1** | **THARUNKUMAR K** | `tharunkumark42007@gmail.com` | `Admin@123` | `ADMIN` (Lead Administrator) | `EMP-001` |
+| **2** | **SANJAY S** | `sanjayselvakumar05@gmail.com` | `Hr@123` | `HR` (HR Officer & People Ops) | `EMP-002` |
+| **3** | **RAMKISHORE S M** | `ramkishoresm@gmail.com` | `Employee@123` | `EMPLOYEE` (Senior Software Engineer) | `EMP-003` |
+| **4** | **SANTHOSHKUMAR S** | `writetokumarsanthosh@gmail.com` | `Employee@123` | `EMPLOYEE` (Full Stack & Analytics Lead) | `EMP-004` |
 
 ---
 
 ## 🛠️ Getting Started
 
 ### 1. Database Initialization
-1. Execute `database/schema.sql` in your PostgreSQL / Supabase SQL Editor.
-2. Run the seed script:
 ```bash
 cd server
-npm run db:seed
+npm run migrate  # Executes database/schema.sql on Supabase
+npm run seed     # Seeds the 4 team members
 ```
 
 ### 2. Starting the Application

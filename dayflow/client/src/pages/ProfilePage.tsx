@@ -1,6 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Camera, Mail, Phone, MapPin, Building2, Briefcase, Calendar, Edit2, Save, X, Upload, ArrowLeft } from 'lucide-react';
+import {
+  Camera, Mail, Phone, MapPin, Building2, Briefcase, Calendar,
+  Edit2, Save, X, Upload, ArrowLeft, FileText, ExternalLink, Trash2, CheckCircle2
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { employeeService } from '../services/employeeService';
 import { Card, Button, Input, Textarea, Badge, Loader, EmptyState, Select } from '../components/ui';
@@ -54,7 +57,7 @@ export const ProfilePage: React.FC = () => {
           status: emp.status,
         });
         const docs = await employeeService.getDocuments(routeEmployeeId);
-        setDocuments(docs);
+        setDocuments(docs || []);
       } else {
         const emp = await employeeService.getMyProfile();
         setEmployee(emp);
@@ -63,7 +66,7 @@ export const ProfilePage: React.FC = () => {
           address: emp.address || '',
         });
         const docs = await employeeService.getDocuments(emp.id);
-        setDocuments(docs);
+        setDocuments(docs || []);
       }
     } catch {
       toast.error('Failed to load profile');
@@ -111,12 +114,15 @@ export const ProfilePage: React.FC = () => {
       return;
     }
     setUploadingImage(true);
+    const toastId = toast.loading('Uploading profile picture to Cloudinary...');
     try {
       const url = await employeeService.uploadProfileImage(file, routeEmployeeId ? employee.id : undefined);
       setEmployee((prev) => (prev ? { ...prev, profile_image: url } : prev));
       if (!routeEmployeeId) await refreshUser();
-      toast.success('Profile picture updated');
+      toast.dismiss(toastId);
+      toast.success('Profile picture saved to Cloudinary!');
     } catch {
+      toast.dismiss(toastId);
       toast.error('Failed to upload image');
     } finally {
       setUploadingImage(false);
@@ -124,15 +130,21 @@ export const ProfilePage: React.FC = () => {
   };
 
   const handleDocUpload = async () => {
-    if (!employee || !docForm.file || !docForm.name) return;
+    if (!employee || !docForm.file || !docForm.name) {
+      toast.error('Please enter a document name and select a file');
+      return;
+    }
     setUploadingDoc(true);
+    const toastId = toast.loading('Uploading document to Cloudinary...');
     try {
       const doc = await employeeService.uploadDocument(employee.id, docForm.file, docForm.name, docForm.type);
-      setDocuments(prev => [doc, ...prev]);
+      setDocuments((prev) => [doc, ...prev]);
       setUploadDocModal(false);
       setDocForm({ name: '', type: 'ID Proof', file: null });
-      toast.success('Document uploaded');
+      toast.dismiss(toastId);
+      toast.success('Document uploaded to Cloudinary successfully!');
     } catch {
+      toast.dismiss(toastId);
       toast.error('Failed to upload document');
     } finally {
       setUploadingDoc(false);
@@ -141,10 +153,11 @@ export const ProfilePage: React.FC = () => {
 
   const handleDeleteDoc = async (docId: string) => {
     if (!employee) return;
+    if (!window.confirm('Are you sure you want to delete this document?')) return;
     try {
       await employeeService.deleteDocument(employee.id, docId);
-      setDocuments(prev => prev.filter(d => d.id !== docId));
-      toast.success('Document deleted');
+      setDocuments((prev) => prev.filter((d) => d.id !== docId));
+      toast.success('Document removed');
     } catch {
       toast.error('Failed to delete document');
     }
@@ -156,28 +169,28 @@ export const ProfilePage: React.FC = () => {
   const statusColor = employee.status === 'ACTIVE' ? 'green' : employee.status === 'ON_LEAVE' ? 'yellow' : 'red';
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
+    <div className="max-w-5xl mx-auto space-y-6 animate-fadeIn font-sans pb-10">
       {routeEmployeeId && (
         <Button
           variant="ghost"
           size="sm"
           leftIcon={<ArrowLeft className="w-4 h-4" />}
           onClick={() => navigate('/employees')}
-          className="-mb-2 text-slate-500 hover:text-slate-800"
+          className="-mb-2 text-stone-500 hover:text-stone-900"
         >
           Back to Employee Directory
         </Button>
       )}
 
       {/* Profile Header */}
-      <Card>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
+      <Card className="p-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <div className="relative">
-            <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-sm">
+            <div className="w-24 h-24 rounded-2xl bg-stone-100 border border-stone-200 flex items-center justify-center overflow-hidden flex-shrink-0 shadow-xs">
               {employee.profile_image ? (
                 <img src={employee.profile_image} alt="" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-2xl font-bold text-blue-600">
+                <span className="text-3xl font-black text-stone-700">
                   {employee.first_name[0]}{employee.last_name?.[0] || ''}
                 </span>
               )}
@@ -186,23 +199,24 @@ export const ProfilePage: React.FC = () => {
               id="upload-profile-image-btn"
               onClick={() => imageInputRef.current?.click()}
               disabled={uploadingImage}
-              className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-blue-600 text-white flex items-center justify-center hover:bg-blue-700 transition-colors border-2 border-white"
+              title="Upload new profile picture"
+              className="absolute -bottom-2 -right-2 w-8 h-8 rounded-xl bg-black text-white flex items-center justify-center hover:bg-stone-800 transition-colors shadow-md border-2 border-white"
             >
-              {uploadingImage ? <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> : <Camera className="w-3 h-3" />}
+              {uploadingImage ? <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Camera className="w-4 h-4" />}
             </button>
             <input ref={imageInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </div>
 
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h2 className="text-xl font-bold text-slate-800">{employee.first_name} {employee.last_name}</h2>
+          <div className="flex-1 min-w-0">
+            <div className="flex flex-wrap items-center gap-2.5 mb-1.5">
+              <h1 className="text-2xl font-black text-stone-900 tracking-tight">{employee.first_name} {employee.last_name}</h1>
               <Badge variant={statusColor as 'green' | 'yellow' | 'red'}>{employee.status}</Badge>
             </div>
-            <p className="text-slate-600 text-sm font-medium">{employee.designation || 'Staff Member'}</p>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-xs text-slate-500">
-              <span className="flex items-center gap-1"><Building2 className="w-3 h-3" />{employee.department_name || 'No Department'}</span>
-              <span className="flex items-center gap-1"><Mail className="w-3 h-3" />{employee.email}</span>
-              <span className="flex items-center gap-1 font-mono"><Briefcase className="w-3 h-3" />{employee.employee_code}</span>
+            <p className="text-stone-600 text-sm font-semibold">{employee.designation || 'Staff Member'}</p>
+            <div className="flex flex-wrap items-center gap-4 mt-2.5 text-xs text-stone-500">
+              <span className="flex items-center gap-1.5"><Building2 className="w-3.5 h-3.5 text-stone-400" />{employee.department_name || 'General Operations'}</span>
+              <span className="flex items-center gap-1.5"><Mail className="w-3.5 h-3.5 text-stone-400" />{employee.email}</span>
+              <span className="flex items-center gap-1.5 font-mono bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200"><Briefcase className="w-3 h-3 text-stone-500" />{employee.employee_code}</span>
             </div>
           </div>
 
@@ -216,44 +230,27 @@ export const ProfilePage: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Personal Details */}
-        <Card>
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Personal Details</h3>
+        <Card className="p-6">
+          <h2 className="text-sm font-bold text-stone-900 uppercase tracking-wider mb-4">Contact & Personal Details</h2>
           {isEditing ? (
-            <div className="space-y-3">
-              {routeEmployeeId && isHR && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Input
-                    id="edit-first-name"
-                    label="First Name"
-                    value={formData.first_name || ''}
-                    onChange={(e) => setFormData(p => ({ ...p, first_name: e.target.value }))}
-                  />
-                  <Input
-                    id="edit-last-name"
-                    label="Last Name"
-                    value={formData.last_name || ''}
-                    onChange={(e) => setFormData(p => ({ ...p, last_name: e.target.value }))}
-                  />
-                </div>
-              )}
+            <div className="space-y-4">
               <Input
                 id="edit-phone"
-                label="Phone"
+                label="Phone Number"
                 value={formData.phone}
                 onChange={(e) => setFormData(p => ({ ...p, phone: e.target.value }))}
-                placeholder="+91 9999999999"
-                leftIcon={<Phone className="w-4 h-4" />}
+                placeholder="+91 9876543210"
               />
               <Textarea
                 id="edit-address"
-                label="Address"
+                label="Residential Address"
                 value={formData.address}
                 onChange={(e) => setFormData(p => ({ ...p, address: e.target.value }))}
-                placeholder="Enter address"
+                placeholder="Enter full address"
               />
-              <div className="flex gap-2 pt-2">
+              <div className="flex gap-2.5 pt-2">
                 <Button id="save-profile-btn" size="sm" isLoading={isSaving} leftIcon={<Save className="w-4 h-4" />} onClick={handleSave}>
-                  Save
+                  Save Changes
                 </Button>
                 <Button size="sm" variant="outline" leftIcon={<X className="w-4 h-4" />} onClick={() => setIsEditing(false)}>
                   Cancel
@@ -261,17 +258,17 @@ export const ProfilePage: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {[
-                { icon: <Phone className="w-4 h-4" />, label: 'Phone', value: employee.phone || '—' },
-                { icon: <Mail className="w-4 h-4" />, label: 'Email', value: employee.email },
-                { icon: <MapPin className="w-4 h-4" />, label: 'Address', value: employee.address || '—' },
+                { icon: <Phone className="w-4 h-4 text-stone-400" />, label: 'Phone', value: employee.phone || 'Not provided' },
+                { icon: <Mail className="w-4 h-4 text-stone-400" />, label: 'Email Address', value: employee.email },
+                { icon: <MapPin className="w-4 h-4 text-stone-400" />, label: 'Residential Address', value: employee.address || 'Not provided' },
               ].map(item => (
-                <div key={item.label} className="flex items-start gap-3">
-                  <span className="text-slate-400 mt-0.5">{item.icon}</span>
+                <div key={item.label} className="flex items-start gap-3.5 p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60">
+                  <span className="mt-0.5">{item.icon}</span>
                   <div>
-                    <p className="text-xs text-slate-500">{item.label}</p>
-                    <p className="text-sm text-slate-800">{item.value}</p>
+                    <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">{item.label}</p>
+                    <p className="text-xs font-semibold text-stone-800 mt-0.5">{item.value}</p>
                   </div>
                 </div>
               ))}
@@ -280,10 +277,10 @@ export const ProfilePage: React.FC = () => {
         </Card>
 
         {/* Job Details */}
-        <Card>
-          <h3 className="text-sm font-semibold text-slate-700 mb-4">Job Details</h3>
+        <Card className="p-6">
+          <h2 className="text-sm font-bold text-stone-900 uppercase tracking-wider mb-4">Job & Employment Details</h2>
           {isEditing && routeEmployeeId && isHR ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <Select
                 id="edit-department"
                 label="Department"
@@ -300,7 +297,7 @@ export const ProfilePage: React.FC = () => {
               />
               <Select
                 id="edit-status"
-                label="Status"
+                label="Employee Status"
                 value={formData.status || 'ACTIVE'}
                 onChange={(e) => setFormData(p => ({ ...p, status: e.target.value as Employee['status'] }))}
                 options={[
@@ -312,18 +309,18 @@ export const ProfilePage: React.FC = () => {
               />
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-3.5">
               {[
-                { icon: <Briefcase className="w-4 h-4" />, label: 'Employee Code', value: employee.employee_code },
-                { icon: <Building2 className="w-4 h-4" />, label: 'Department', value: employee.department_name || '—' },
-                { icon: <Briefcase className="w-4 h-4" />, label: 'Designation', value: employee.designation || '—' },
-                { icon: <Calendar className="w-4 h-4" />, label: 'Joining Date', value: employee.joining_date ? format(new Date(employee.joining_date), 'MMMM d, yyyy') : '—' },
+                { icon: <Briefcase className="w-4 h-4 text-stone-400" />, label: 'Employee ID Code', value: employee.employee_code },
+                { icon: <Building2 className="w-4 h-4 text-stone-400" />, label: 'Department', value: employee.department_name || 'General' },
+                { icon: <Briefcase className="w-4 h-4 text-stone-400" />, label: 'Designation', value: employee.designation || 'Software Engineer' },
+                { icon: <Calendar className="w-4 h-4 text-stone-400" />, label: 'Date of Joining', value: employee.joining_date ? format(new Date(employee.joining_date), 'MMMM d, yyyy') : '—' },
               ].map(item => (
-                <div key={item.label} className="flex items-start gap-3">
-                  <span className="text-slate-400 mt-0.5">{item.icon}</span>
+                <div key={item.label} className="flex items-start gap-3.5 p-2.5 rounded-xl bg-stone-50/70 border border-stone-200/60">
+                  <span className="mt-0.5">{item.icon}</span>
                   <div>
-                    <p className="text-xs text-slate-500">{item.label}</p>
-                    <p className="text-sm text-slate-800">{item.value}</p>
+                    <p className="text-[11px] font-bold text-stone-400 uppercase tracking-wider">{item.label}</p>
+                    <p className="text-xs font-semibold text-stone-800 mt-0.5">{item.value}</p>
                   </div>
                 </div>
               ))}
@@ -332,29 +329,59 @@ export const ProfilePage: React.FC = () => {
         </Card>
       </div>
 
-      {/* Documents */}
-      <Card>
+      {/* Cloudinary Documents Section */}
+      <Card className="p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-slate-700">Employee Documents</h3>
-          <Button id="upload-document-btn" size="sm" variant="outline" leftIcon={<Upload className="w-4 h-4" />} onClick={() => setUploadDocModal(true)}>
+          <div>
+            <h2 className="text-sm font-bold text-stone-900 uppercase tracking-wider">Employee Documents & Proofs</h2>
+            <p className="text-xs text-stone-500 mt-0.5">Securely uploaded and stored on Cloudinary</p>
+          </div>
+          <Button id="upload-document-btn" size="sm" leftIcon={<Upload className="w-4 h-4" />} onClick={() => setUploadDocModal(true)}>
             Upload Document
           </Button>
         </div>
+
         {documents.length === 0 ? (
-          <EmptyState title="No documents" description="No verified documents uploaded yet." />
+          <EmptyState
+            icon={<FileText className="w-10 h-10 text-stone-400" />}
+            title="No documents uploaded yet"
+            description="Upload verified identification proofs, educational certificates, or experience letters."
+          />
         ) : (
-          <div className="space-y-2">
-            {documents.map(doc => (
-              <div key={doc.id} className="flex items-center justify-between py-2 px-3 rounded-lg bg-slate-50 border border-slate-200">
-                <div>
-                  <p className="text-sm font-medium text-slate-700">{doc.document_name}</p>
-                  <p className="text-xs text-slate-500">{doc.document_type} · {format(new Date(doc.uploaded_at), 'MMM d, yyyy')}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {documents.map((doc) => (
+              <div key={doc.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-white border border-stone-200 shadow-xs hover:border-stone-300 transition-colors">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-stone-100 text-stone-700 flex items-center justify-center flex-shrink-0 mt-0.5 border border-stone-200">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold text-stone-900 truncate">{doc.document_name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] font-bold bg-stone-100 text-stone-600 px-2 py-0.5 rounded-full border border-stone-200">
+                        {doc.document_type}
+                      </span>
+                      <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> Verified
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <a href={doc.cloudinary_url} target="_blank" rel="noreferrer">
-                    <Button size="sm" variant="ghost">View</Button>
+                <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
+                  <a href={doc.cloudinary_url} target="_blank" rel="noreferrer" title="Open in new tab">
+                    <Button size="sm" variant="outline" leftIcon={<ExternalLink className="w-3 h-3" />}>
+                      View
+                    </Button>
                   </a>
-                  <Button size="sm" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => handleDeleteDoc(doc.id)}>Delete</Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                    title="Delete document"
+                    onClick={() => handleDeleteDoc(doc.id)}
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
                 </div>
               </div>
             ))}
@@ -363,29 +390,65 @@ export const ProfilePage: React.FC = () => {
       </Card>
 
       {/* Upload Document Modal */}
-      <Modal isOpen={uploadDocModal} onClose={() => setUploadDocModal(false)} title="Upload Document"
+      <Modal
+        isOpen={uploadDocModal}
+        onClose={() => setUploadDocModal(false)}
+        title="Upload Document to Cloudinary"
         footer={
           <>
             <Button variant="outline" size="sm" onClick={() => setUploadDocModal(false)}>Cancel</Button>
-            <Button id="confirm-upload-doc-btn" size="sm" isLoading={uploadingDoc} onClick={handleDocUpload} disabled={!docForm.file || !docForm.name}>
-              Upload
+            <Button
+              id="confirm-upload-doc-btn"
+              size="sm"
+              isLoading={uploadingDoc}
+              onClick={handleDocUpload}
+              disabled={!docForm.file || !docForm.name}
+            >
+              Upload to Cloudinary
             </Button>
           </>
         }
       >
         <div className="space-y-4">
-          <Input id="doc-name" label="Document Name" value={docForm.name} onChange={(e) => setDocForm(p => ({ ...p, name: e.target.value }))} placeholder="e.g. Aadhar Card" required />
-          <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700">Document Type</label>
-            <select className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" value={docForm.type} onChange={(e) => setDocForm(p => ({ ...p, type: e.target.value }))}>
-              {['ID Proof', 'Address Proof', 'Educational Certificate', 'Experience Letter', 'Other'].map(t => (
+          <Input
+            id="doc-name"
+            label="Document Title"
+            value={docForm.name}
+            onChange={(e) => setDocForm(p => ({ ...p, name: e.target.value }))}
+            placeholder="e.g. Aadhar Card / Passport / Degree Certificate"
+            required
+          />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">Document Category</label>
+            <select
+              className="w-full rounded-xl border border-stone-200 px-3.5 py-2 text-xs font-semibold text-stone-800 bg-white focus:outline-none focus:ring-2 focus:ring-black"
+              value={docForm.type}
+              onChange={(e) => setDocForm(p => ({ ...p, type: e.target.value }))}
+            >
+              {['ID Proof', 'Address Proof', 'Educational Certificate', 'Experience Letter', 'Medical Certificate', 'Other'].map(t => (
                 <option key={t}>{t}</option>
               ))}
             </select>
           </div>
-          <div>
-            <label className="text-sm font-medium text-slate-700 block mb-1">File</label>
-            <input ref={docInputRef} type="file" className="w-full text-sm text-slate-600" onChange={(e) => setDocForm(p => ({ ...p, file: e.target.files?.[0] || null }))} />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-stone-700 uppercase tracking-wider">Select File (PDF / Images / Docs)</label>
+            <div
+              onClick={() => docInputRef.current?.click()}
+              className="border-2 border-dashed border-stone-200 rounded-2xl p-6 text-center cursor-pointer hover:bg-stone-50/80 hover:border-stone-300 transition-colors"
+            >
+              <Upload className="w-8 h-8 text-stone-400 mx-auto mb-2" />
+              <p className="text-xs font-bold text-stone-800">
+                {docForm.file ? docForm.file.name : 'Click to browse or drop file here'}
+              </p>
+              <p className="text-[10px] text-stone-400 mt-1">Supports PDF, PNG, JPG, JPEG up to 10MB</p>
+            </div>
+            <input
+              ref={docInputRef}
+              type="file"
+              className="hidden"
+              accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
+              onChange={(e) => setDocForm(p => ({ ...p, file: e.target.files?.[0] || null }))}
+            />
           </div>
         </div>
       </Modal>

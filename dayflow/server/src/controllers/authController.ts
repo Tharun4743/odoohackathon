@@ -100,4 +100,30 @@ export const authController = {
       next(err);
     }
   },
+
+  async forgotPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        throw new AppError('Email address is required.', 400);
+      }
+      const result = await authService.forgotPassword(email);
+      res.json({ success: true, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async resetPassword(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { email, token, newPassword } = req.body;
+      if (!email || !token || !newPassword) {
+        throw new AppError('Email, verification code, and new password are required.', 400);
+      }
+      const result = await authService.resetPassword(email, token, newPassword);
+      res.json({ success: true, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  },
 };

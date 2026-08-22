@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Mail, Lock, Eye, EyeOff, ArrowRight, ShieldAlert } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button, Input } from '../../components/ui';
 import toast from 'react-hot-toast';
+import logoImg from '../../assets/logo.png';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -34,32 +35,37 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const demoAccounts = [
-    { label: 'Admin', email: 'admin@dayflow.com', password: 'Admin@123' },
-    { label: 'HR Officer', email: 'hr@dayflow.com', password: 'Hr@123' },
-    { label: 'Employee', email: 'employee@dayflow.com', password: 'Employee@123' },
+  const teamAccounts = [
+    { label: 'Tharun (Admin)', email: 'tharunkumark42007@gmail.com', password: 'Admin@123', role: 'ADMIN' },
+    { label: 'Sanjay (HR)', email: 'sanjayselvakumar05@gmail.com', password: 'Hr@123', role: 'HR' },
+    { label: 'Ramkishore', email: 'ramkishoresm@gmail.com', password: 'Employee@123', role: 'EMPLOYEE' },
+    { label: 'Santhosh', email: 'writetokumarsanthosh@gmail.com', password: 'Employee@123', role: 'EMPLOYEE' },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 flex">
-      {/* Left side - branding */}
-      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-white">
-        <div className="max-w-md text-center">
-          <div className="w-16 h-16 rounded-2xl bg-blue-500 flex items-center justify-center mx-auto mb-6">
-            <Building2 className="w-9 h-9" />
+    <div className="min-h-screen bg-[#F5F5F4] flex font-sans">
+      {/* Left side - branding (IT Task Manager Theme) */}
+      <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-stone-900 border-r border-stone-200/80 bg-white">
+        <div className="max-w-md text-left">
+          <div className="w-16 h-16 rounded-2xl bg-white border border-stone-200 shadow-sm flex items-center justify-center p-1 mb-6 overflow-hidden">
+            <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain" />
           </div>
-          <h1 className="text-4xl font-bold mb-3">Dayflow HRMS</h1>
-          <p className="text-slate-300 text-lg mb-8">"Every workday, perfectly aligned."</p>
-          <div className="grid grid-cols-2 gap-4 text-sm">
+          <h1 className="text-4xl font-extrabold text-stone-900 mb-2 tracking-tight">Work Suite HRMS</h1>
+          <p className="text-stone-500 font-semibold text-base mb-8">"Every workday, perfectly aligned."</p>
+
+          <div className="space-y-3 text-sm">
             {[
-              { label: 'Employee Directory', desc: 'HR-provisioned accounts' },
-              { label: 'Live Attendance', desc: 'Check-in, breaks & tracking' },
-              { label: 'Time Off Requests', desc: 'Multi-type approval flow' },
-              { label: 'Attendance Payroll', desc: 'Calculated from actual attendance' },
+              { title: 'HR Employee Directory', desc: 'Secure company-provisioned employee accounts with custom initial passwords' },
+              { title: 'Live Attendance & Breaks', desc: 'Real-time check-in, check-out, and break duration tracker' },
+              { title: 'Time Off Requests', desc: 'Multi-type time off application and streamlined HR approval workflow' },
+              { title: 'Attendance-Linked Payroll', desc: 'Payable days calculated directly from verified monthly attendance logs' },
             ].map((f) => (
-              <div key={f.label} className="bg-white/10 rounded-xl p-4 text-left">
-                <p className="font-semibold mb-1">{f.label}</p>
-                <p className="text-slate-300 text-xs">{f.desc}</p>
+              <div key={f.title} className="p-3.5 rounded-2xl bg-stone-50/80 border border-stone-200/70 flex items-start gap-3">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-bold text-stone-800 text-xs uppercase tracking-wider">{f.title}</p>
+                  <p className="text-stone-500 text-xs mt-0.5 leading-relaxed">{f.desc}</p>
+                </div>
               </div>
             ))}
           </div>
@@ -71,36 +77,45 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+              <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-white">Dayflow</h1>
-              <p className="text-xs text-slate-400">HRMS</p>
+              <h1 className="text-lg font-black text-stone-900">Work Suite</h1>
+              <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">HRMS Platform</p>
             </div>
           </div>
 
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <h2 className="text-2xl font-bold text-slate-800 mb-1">Sign in</h2>
-            <p className="text-slate-500 text-sm mb-6">Access your Dayflow HRMS workspace</p>
+          <div className="bg-white rounded-3xl shadow-xl shadow-stone-200/50 p-8 border border-stone-200/90">
+            <h2 className="text-2xl font-black text-stone-900 mb-1 tracking-tight">Sign in</h2>
+            <p className="text-stone-500 text-xs font-medium mb-6">Enter your credentials to access your Work Suite workspace</p>
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <Input
                 id="login-email"
-                label="Email"
+                label="Email Address"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@dayflow.com"
-                leftIcon={<Mail className="w-4 h-4" />}
+                placeholder="your.email@company.com"
+                leftIcon={<Mail className="w-4 h-4 text-stone-400" />}
                 required
               />
-              <div className="flex flex-col gap-1">
-                <label htmlFor="login-password" className="text-sm font-medium text-slate-700">
-                  Password <span className="text-red-500">*</span>
-                </label>
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between">
+                  <label htmlFor="login-password" className="text-xs font-bold text-stone-700 uppercase tracking-wider">
+                    Password <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/forgot-password')}
+                    className="text-[11px] font-bold text-stone-500 hover:text-black transition-colors"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div className="relative">
-                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -109,13 +124,13 @@ export const LoginPage: React.FC = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 pl-9 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full rounded-xl border border-stone-200 px-3.5 py-2 pl-10 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent transition-all bg-white"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-700"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -123,15 +138,15 @@ export const LoginPage: React.FC = () => {
               </div>
 
               {error && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-600">{error}</p>
+                <div className="p-3 bg-rose-50 border border-rose-200/80 rounded-xl">
+                  <p className="text-xs text-rose-600 font-semibold">{error}</p>
                 </div>
               )}
 
               <Button
                 type="submit"
                 variant="primary"
-                className="w-full"
+                className="w-full py-2.5 shadow-xs"
                 isLoading={isLoading}
                 rightIcon={<ArrowRight className="w-4 h-4" />}
               >
@@ -140,22 +155,23 @@ export const LoginPage: React.FC = () => {
             </form>
 
             {/* Registration note */}
-            <div className="mt-4 p-3 bg-slate-50 border border-slate-200 rounded-xl flex items-start gap-2 text-xs text-slate-600">
-              <ShieldAlert className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+            <div className="mt-4 p-3 bg-amber-50/70 border border-amber-200/70 rounded-2xl flex items-start gap-2.5 text-xs text-amber-800">
+              <ShieldAlert className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
               <span>Self-registration is disabled. Employee accounts are created by HR. Contact your HR admin if you need credentials.</span>
             </div>
 
-            {/* Demo accounts */}
-            <div className="mt-5 pt-4 border-t border-slate-100">
-              <p className="text-xs text-slate-400 mb-2 text-center font-medium">Quick Demo Login</p>
-              <div className="flex gap-2">
-                {demoAccounts.map((acc) => (
+            {/* Team One-Click Login */}
+            <div className="mt-5 pt-4 border-t border-stone-100">
+              <p className="text-[11px] text-stone-400 mb-2.5 text-center font-bold uppercase tracking-wider">Quick Team Member Login</p>
+              <div className="grid grid-cols-2 gap-2">
+                {teamAccounts.map((acc) => (
                   <button
                     key={acc.label}
                     onClick={() => { setEmail(acc.email); setPassword(acc.password); }}
-                    className="flex-1 text-xs py-1.5 px-2 border border-slate-200 rounded-lg text-slate-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                    className="text-xs py-2 px-2.5 border border-stone-200 rounded-xl text-stone-700 hover:bg-stone-100/80 hover:border-stone-300 hover:text-black transition-all font-semibold text-left truncate bg-stone-50/50"
                   >
-                    {acc.label}
+                    <p className="font-bold text-stone-900 truncate text-[11px]">{acc.label}</p>
+                    <p className="text-[10px] text-stone-400 font-mono truncate">{acc.email.split('@')[0]}</p>
                   </button>
                 ))}
               </div>
