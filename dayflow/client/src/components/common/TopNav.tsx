@@ -115,9 +115,9 @@ export const TopNav: React.FC<{ title?: string }> = ({ title }) => {
             onClick={() => setDropdownOpen(!dropdownOpen)}
             className="flex items-center gap-2.5 p-1.5 pr-2.5 rounded-xl border border-stone-200/80 bg-stone-50/50 hover:bg-stone-100/80 transition-colors focus:outline-none focus:ring-2 focus:ring-black"
           >
-            <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden shadow-xs">
+            <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white text-xs font-bold flex-shrink-0 overflow-hidden shadow-xs">
               {user?.profile_image
-                ? <img src={user.profile_image} alt="" className="w-full h-full object-cover" />
+                ? <img src={user.profile_image} alt="" className="w-full h-full object-cover rounded-full" />
                 : initials
               }
             </div>

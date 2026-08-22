@@ -47,7 +47,7 @@ export const LoginPage: React.FC = () => {
       {/* Left side - branding (IT Task Manager Theme) */}
       <div className="hidden lg:flex lg:w-1/2 flex-col justify-center items-center p-12 text-stone-900 border-r border-stone-200/80 bg-white">
         <div className="max-w-md text-left">
-          <div className="w-16 h-16 rounded-2xl bg-white border border-stone-200 shadow-sm flex items-center justify-center p-1 mb-6 overflow-hidden">
+          <div className="w-16 h-16 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center p-1 mb-6 overflow-hidden">
             <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain" />
           </div>
           <h1 className="text-4xl font-extrabold text-stone-900 mb-2 tracking-tight">Work Suite HRMS</h1>
@@ -77,7 +77,7 @@ export const LoginPage: React.FC = () => {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-            <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+            <div className="w-12 h-12 rounded-full bg-white border border-stone-200 p-1 flex items-center justify-center shadow-xs overflow-hidden">
               <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain" />
             </div>
             <div>
