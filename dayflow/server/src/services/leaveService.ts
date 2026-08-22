@@ -1,3 +1,4 @@
+/** Time Off / Leave Management Module - Person 3 */
 import { query } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { LeaveFilters } from '../types';
