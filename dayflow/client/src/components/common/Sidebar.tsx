@@ -57,9 +57,9 @@ export const Sidebar: React.FC = () => {
       collapsed ? 'w-16' : 'w-60'
     )}>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-3.5 py-4 border-b border-stone-200/80">
-        <div className="w-11 h-11 rounded-full bg-white border border-stone-200 shadow-sm flex items-center justify-center p-0.5 overflow-hidden flex-shrink-0">
-          <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain rounded-full scale-105" />
+      <div className="flex items-center gap-3 px-3.5 py-3.5 border-b border-stone-200/80">
+        <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+          <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain drop-shadow-sm" />
         </div>
         {!collapsed && (
           <div className="min-w-0 flex-1">
