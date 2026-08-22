@@ -479,6 +479,102 @@ const HRDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Choose Module (Admin/HR Core Flowchart Modules) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-extrabold text-stone-900 tracking-tight">Choose Module</h3>
+            <p className="text-xs text-stone-500 font-medium">Select an administrative module to manage company operations</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          {/* 1. Employee Management */}
+          <div
+            id="admin-module-employees"
+            onClick={() => navigate('/employees')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-blue-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <Users className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-blue-600">Employee Management</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Employee list, switch profiles, view/edit all 360° details & salary structures
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700">
+              <span>Manage Employees</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 2. Attendance Records */}
+          <div
+            id="admin-module-attendance"
+            onClick={() => navigate('/attendance')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-emerald-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <Clock className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-emerald-600">Attendance Records</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Live attendance for all employees, daily/monthly logs & break duration
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:text-emerald-700">
+              <span>View All Attendance</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 3. Leave Approval */}
+          <div
+            id="admin-module-leave"
+            onClick={() => navigate('/leave')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-amber-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-amber-600">Leave Approval</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Review all requests, add HR review comments, approve or reject
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700">
+              <span>Review Requests</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 4. Payroll Control */}
+          <div
+            id="admin-module-payroll"
+            onClick={() => navigate('/payroll')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-purple-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-purple-600">Payroll Control</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Attendance-driven salary generation, company ledger & PDF payslips
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-purple-600 group-hover:text-purple-700">
+              <span>Payroll Ledger</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* KPI Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {isLoading
