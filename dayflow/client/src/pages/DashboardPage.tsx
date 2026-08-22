@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Clock, Calendar, DollarSign, Bell, ArrowRight, CheckCircle2,
   AlertCircle, User, Building2, TrendingUp, Users, FileText,
-  Coffee, Search, Plane
+  Coffee, Search, Plane, LogOut
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { attendanceService } from '../services/attendanceService';
@@ -18,7 +18,7 @@ import toast from 'react-hot-toast';
 
 // Employee Dashboard
 const EmployeeDashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [attendance, setAttendance] = useState<Attendance | null>(null);
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -26,6 +26,16 @@ const EmployeeDashboard: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch {
+      toast.error('Logout failed');
+    }
+  };
 
   const fullName = user?.first_name ? `${user.first_name} ${user.last_name || ''}` : user?.email || 'User';
   const greeting = () => {
@@ -258,24 +268,122 @@ const EmployeeDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <h3 className="text-sm font-semibold text-slate-700 mb-3">Quick Navigation</h3>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" leftIcon={<User className="w-4 h-4" />} onClick={() => navigate('/profile')}>
-            My Profile
-          </Button>
-          <Button size="sm" variant="outline" leftIcon={<Clock className="w-4 h-4" />} onClick={() => navigate('/attendance')}>
-            Monthly Attendance
-          </Button>
-          <Button size="sm" variant="outline" leftIcon={<Calendar className="w-4 h-4" />} onClick={() => navigate('/leave')}>
-            Apply Time Off
-          </Button>
-          <Button size="sm" variant="outline" leftIcon={<DollarSign className="w-4 h-4" />} onClick={() => navigate('/payroll')}>
-            Salary & Payslips
-          </Button>
+      {/* Choose a Module (Employee Core Flow) */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-extrabold text-stone-900 tracking-tight">Choose a Module</h3>
+            <p className="text-xs text-stone-500 font-medium">Select a core workspace module to manage your daily tasks</p>
+          </div>
         </div>
-      </Card>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+          {/* 1. Profile */}
+          <div
+            id="employee-module-profile"
+            onClick={() => navigate('/profile')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-stone-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-stone-100 text-stone-900 group-hover:bg-stone-900 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <User className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-black">Profile</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                View & edit personal details, avatar, and employee profile
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-stone-700 group-hover:text-black">
+              <span>View Details</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 2. Attendance */}
+          <div
+            id="employee-module-attendance"
+            onClick={() => navigate('/attendance')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-blue-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <Clock className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-blue-600">Attendance</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Check-in/out, live breaks, and complete monthly history
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-blue-600 group-hover:text-blue-700">
+              <span>Check-in / History</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 3. Leave / Time Off */}
+          <div
+            id="employee-module-leave"
+            onClick={() => navigate('/leave')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-amber-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <Calendar className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-amber-600">Leave</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Apply for multi-type leaves, view approval status & balances
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-amber-600 group-hover:text-amber-700">
+              <span>Apply & Status</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 4. Payroll */}
+          <div
+            id="employee-module-payroll"
+            onClick={() => navigate('/payroll')}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-emerald-400/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <DollarSign className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-emerald-600">Payroll</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                View salary structure breakdown & download PDF payslips
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-emerald-600 group-hover:text-emerald-700">
+              <span>View Salary</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+
+          {/* 5. Logout */}
+          <div
+            id="employee-module-logout"
+            onClick={handleLogout}
+            className="group cursor-pointer p-4 rounded-2xl bg-white border border-stone-200/90 shadow-xs hover:shadow-md hover:border-rose-300/80 transition-all flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors flex items-center justify-center mb-3 shadow-xs">
+                <LogOut className="w-5 h-5" />
+              </div>
+              <h4 className="font-extrabold text-stone-900 text-sm group-hover:text-rose-600">Logout</h4>
+              <p className="text-[11px] text-stone-500 font-medium mt-1 leading-snug">
+                Securely sign out and terminate active workspace session
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs font-bold text-rose-600 group-hover:text-rose-700">
+              <span>Sign Out</span>
+              <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Recent Time Off Requests */}
       {leaves.length > 0 && (
