@@ -72,7 +72,7 @@ export const leaveService = {
     const result = await query(
       `SELECT lr.*, u.email as approved_by_email
        FROM leave_requests lr
-       LEFT JOIN users u ON u.id = lr.approved_by::uuid
+       LEFT JOIN users u ON u.id::text = lr.approved_by::text
        ${where}
        ORDER BY lr.created_at DESC
        LIMIT $${idx} OFFSET $${idx + 1}`,
