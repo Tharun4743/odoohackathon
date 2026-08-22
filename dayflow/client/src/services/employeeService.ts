@@ -100,4 +100,19 @@ export const employeeService = {
   async deleteDocument(employeeId: string, docId: string) {
     await api.delete(`/employees/${employeeId}/documents/${docId}`);
   },
+
+  async getPendingApprovals() {
+    const res = await api.get('/employees/pending-approvals');
+    return res.data.data.pending as (Employee & { user_email: string; user_role: string; is_verified: boolean; user_created_at: string })[];
+  },
+
+  async approveRegistration(employeeId: string) {
+    const res = await api.post(`/employees/${employeeId}/approve-registration`);
+    return res.data;
+  },
+
+  async rejectRegistration(employeeId: string, reason?: string) {
+    const res = await api.post(`/employees/${employeeId}/reject-registration`, { reason });
+    return res.data;
+  },
 };

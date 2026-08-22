@@ -2,6 +2,8 @@ import { query, getClient } from '../config/database';
 import bcrypt from 'bcryptjs';
 import { AppError } from '../middleware/errorHandler';
 import cloudinary from '../config/cloudinary';
+import { sendEmail, buildProfessionalEmailHtml } from '../utils/mailer';
+import { notificationService } from './notificationService';
 
 export const employeeService = {
   async getAll(filters: {
@@ -300,5 +302,126 @@ export const employeeService = {
     );
 
     return uploadResult.secure_url;
+  },
+
+  async getPendingApprovals() {
+    const result = await query(
+      `SELECT e.*, u.email as user_email, u.role as user_role, u.is_verified, u.created_at as user_created_at
+       FROM employees e
+       JOIN users u ON u.id = e.user_id
+       WHERE u.is_approved = FALSE OR u.approval_status = 'PENDING'
+       ORDER BY u.created_at DESC`
+    );
+    return result.rows;
+  },
+
+  async approveRegistration(employeeId: string) {
+    const empRes = await query(
+      `SELECT e.*, u.id as user_id, u.email as user_email, u.role as user_role
+       FROM employees e
+       JOIN users u ON u.id = e.user_id
+       WHERE e.id = $1`,
+      [employeeId]
+    );
+    if (empRes.rows.length === 0) throw new AppError('Employee record not found.', 404);
+    const emp = empRes.rows[0];
+
+    // Update user and employee records to APPROVED
+    await query(
+      `UPDATE users SET is_approved = TRUE, approval_status = 'APPROVED', updated_at = NOW() WHERE id = $1`,
+      [emp.user_id]
+    );
+    await query(
+      `UPDATE employees SET approval_status = 'APPROVED', status = 'ACTIVE', updated_at = NOW() WHERE id = $1`,
+      [employeeId]
+    );
+
+    // 1. In-App Notification to User
+    await notificationService.create({
+      userId: emp.user_id,
+      title: 'Workspace Account Approved! 🎉',
+      message: 'Your Work Suite HRMS account has been approved by HR. You can now log in to access your dashboard.',
+      type: 'SYSTEM',
+    }).catch(() => {});
+
+    // 2. Transactional Email with Official Logo to User
+    const recipientEmail = emp.email || emp.user_email;
+    if (recipientEmail) {
+      await sendEmail({
+        to: recipientEmail,
+        subject: 'Work Suite HRMS: Account Approved! 🎉 Welcome to your Workspace',
+        html: buildProfessionalEmailHtml({
+          badgeText: '✅ ACCOUNT AUTHORIZED',
+          badgeColor: '#166534',
+          title: 'Account Approved by HR',
+          bodyHtml: `
+            <p>Hello <strong>${emp.first_name || 'Member'}</strong>,</p>
+            <p>Great news! Your account registration on the <strong>Work Suite HRMS Platform</strong> has been reviewed and authorized by HR Administration.</p>
+            <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px; border-radius: 8px; margin: 16px 0;">
+              <p style="margin: 0; font-size: 13px; color: #166534;">Employee Code: <strong>${emp.employee_code}</strong></p>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #166534;">Role: <strong>${emp.user_role}</strong></p>
+              <p style="margin: 4px 0 0 0; font-size: 13px; color: #166534;">Status: <strong>Active & Authorized</strong></p>
+            </div>
+            <p style="font-size: 13px; color: #475569;">You can now sign in with your email and password to access your profile, biometric attendance clock, time-off requests, and monthly payslips.</p>
+          `,
+          footerNote: 'Work Suite Enterprise Operations Team',
+        }),
+        text: `Your Work Suite HRMS account has been approved by HR! You can now log in with your email ${recipientEmail}.`,
+      }).catch(() => {});
+    }
+
+    return {
+      success: true,
+      message: `Account for ${emp.first_name} ${emp.last_name} (${emp.employee_code}) approved successfully!`,
+      employee: emp,
+    };
+  },
+
+  async rejectRegistration(employeeId: string, reason?: string) {
+    const empRes = await query(
+      `SELECT e.*, u.id as user_id, u.email as user_email
+       FROM employees e
+       JOIN users u ON u.id = e.user_id
+       WHERE e.id = $1`,
+      [employeeId]
+    );
+    if (empRes.rows.length === 0) throw new AppError('Employee record not found.', 404);
+    const emp = empRes.rows[0];
+
+    // Mark as REJECTED
+    await query(
+      `UPDATE users SET is_approved = FALSE, approval_status = 'REJECTED', updated_at = NOW() WHERE id = $1`,
+      [emp.user_id]
+    );
+    await query(
+      `UPDATE employees SET approval_status = 'REJECTED', status = 'INACTIVE', updated_at = NOW() WHERE id = $1`,
+      [employeeId]
+    );
+
+    const recipientEmail = emp.email || emp.user_email;
+    if (recipientEmail) {
+      await sendEmail({
+        to: recipientEmail,
+        subject: 'Work Suite HRMS: Registration Status Update',
+        html: buildProfessionalEmailHtml({
+          badgeText: '❌ REGISTRATION DECLINED',
+          badgeColor: '#9f1239',
+          title: 'Account Registration Not Approved',
+          bodyHtml: `
+            <p>Hello <strong>${emp.first_name || 'User'}</strong>,</p>
+            <p>Your registration request on the Work Suite HRMS platform has been reviewed and declined by the administration.</p>
+            ${reason ? `<div style="background-color: #fff1f2; border-left: 4px solid #f43f5e; padding: 14px; border-radius: 8px; margin: 16px 0;"><p style="margin: 0; font-size: 13px; color: #9f1239;">Reason: <strong>${reason}</strong></p></div>` : ''}
+            <p style="font-size: 12px; color: #64748b;">If you believe this was in error, please contact your company's HR department.</p>
+          `,
+          footerNote: 'Work Suite Enterprise HRMS Security',
+        }),
+        text: `Your registration request was not approved. ${reason || ''}`,
+      }).catch(() => {});
+    }
+
+    return {
+      success: true,
+      message: `Registration for ${emp.first_name} ${emp.last_name} was declined.`,
+    };
   },
 };
