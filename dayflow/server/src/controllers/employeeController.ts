@@ -172,4 +172,32 @@ export const employeeController = {
       next(err);
     }
   },
+
+  async getPendingApprovals(_req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const pending = await employeeService.getPendingApprovals();
+      res.json({ success: true, data: { pending } });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async approveRegistration(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const result = await employeeService.approveRegistration(req.params.id as string);
+      res.json({ success: true, message: result.message, data: result });
+    } catch (err) {
+      next(err);
+    }
+  },
+
+  async rejectRegistration(req: AuthRequest, res: Response, next: NextFunction) {
+    try {
+      const { reason } = req.body;
+      const result = await employeeService.rejectRegistration(req.params.id as string, reason);
+      res.json({ success: true, message: result.message });
+    } catch (err) {
+      next(err);
+    }
+  },
 };
