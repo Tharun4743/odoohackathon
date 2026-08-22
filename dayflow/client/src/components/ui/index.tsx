@@ -21,19 +21,19 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   ...props
 }) => {
-  const base = 'inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed';
+  const base = 'inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-offset-1 disabled:opacity-60 disabled:cursor-not-allowed active:scale-[0.98]';
 
   const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm',
-    secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 focus:ring-slate-400',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm',
-    ghost: 'text-slate-600 hover:bg-slate-100 focus:ring-slate-400',
-    outline: 'border border-slate-300 text-slate-700 hover:bg-slate-50 focus:ring-slate-400',
-    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 shadow-sm',
+    primary: 'bg-black text-white hover:bg-stone-800 focus:ring-black shadow-xs',
+    secondary: 'bg-stone-100 text-stone-800 hover:bg-stone-200 focus:ring-stone-400',
+    danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500 shadow-xs',
+    ghost: 'text-stone-600 hover:bg-stone-100 focus:ring-stone-400',
+    outline: 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50 hover:border-stone-300 focus:ring-stone-400 shadow-xs',
+    success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 shadow-xs',
   };
 
   const sizes = {
-    sm: 'px-3 py-1.5 text-sm',
+    sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',
     lg: 'px-5 py-2.5 text-base',
   };
@@ -70,33 +70,33 @@ export const Input: React.FC<InputProps> = ({
 }) => {
   const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={inputId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={inputId} className="text-xs font-bold text-stone-700 uppercase tracking-wider">
           {label}
-          {props.required && <span className="text-red-500 ml-1">*</span>}
+          {props.required && <span className="text-rose-500 ml-1">*</span>}
         </label>
       )}
       <div className="relative">
         {leftIcon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-stone-400">
             {leftIcon}
           </div>
         )}
         <input
           id={inputId}
           className={clsx(
-            'w-full rounded-lg border px-3 py-2 text-sm text-slate-800 placeholder-slate-400 transition-colors',
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-            leftIcon ? 'pl-9' : '',
-            error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white hover:border-slate-400',
+            'w-full rounded-xl border px-3.5 py-2 text-sm text-stone-900 placeholder-stone-400 transition-all bg-white',
+            'focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent',
+            leftIcon ? 'pl-10' : '',
+            error ? 'border-rose-300 bg-rose-50/50' : 'border-stone-200 hover:border-stone-300',
             className
           )}
           {...props}
         />
       </div>
-      {error && <p className="text-xs text-red-500">{error}</p>}
-      {helperText && !error && <p className="text-xs text-slate-500">{helperText}</p>}
+      {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
+      {helperText && !error && <p className="text-xs text-stone-500">{helperText}</p>}
     </div>
   );
 };
@@ -120,19 +120,19 @@ export const Select: React.FC<SelectProps> = ({
 }) => {
   const selectId = id || label?.toLowerCase().replace(/\s+/g, '-');
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={selectId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={selectId} className="text-xs font-bold text-stone-700 uppercase tracking-wider">
           {label}
-          {props.required && <span className="text-red-500 ml-1">*</span>}
+          {props.required && <span className="text-rose-500 ml-1">*</span>}
         </label>
       )}
       <select
         id={selectId}
         className={clsx(
-          'w-full rounded-lg border px-3 py-2 text-sm text-slate-800 bg-white transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent',
-          error ? 'border-red-400 bg-red-50' : 'border-slate-300 hover:border-slate-400',
+          'w-full rounded-xl border px-3.5 py-2 text-sm text-stone-900 bg-white transition-all',
+          'focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent',
+          error ? 'border-rose-300 bg-rose-50/50' : 'border-stone-200 hover:border-stone-300',
           className
         )}
         {...props}
@@ -142,7 +142,7 @@ export const Select: React.FC<SelectProps> = ({
           <option key={opt.value} value={opt.value}>{opt.label}</option>
         ))}
       </select>
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
     </div>
   );
 };
@@ -156,25 +156,25 @@ interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement
 export const Textarea: React.FC<TextareaProps> = ({ label, error, className, id, ...props }) => {
   const areaId = id || label?.toLowerCase().replace(/\s+/g, '-');
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       {label && (
-        <label htmlFor={areaId} className="text-sm font-medium text-slate-700">
+        <label htmlFor={areaId} className="text-xs font-bold text-stone-700 uppercase tracking-wider">
           {label}
-          {props.required && <span className="text-red-500 ml-1">*</span>}
+          {props.required && <span className="text-rose-500 ml-1">*</span>}
         </label>
       )}
       <textarea
         id={areaId}
         className={clsx(
-          'w-full rounded-lg border px-3 py-2 text-sm text-slate-800 placeholder-slate-400 resize-y',
-          'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors',
-          error ? 'border-red-400 bg-red-50' : 'border-slate-300 bg-white hover:border-slate-400',
+          'w-full rounded-xl border px-3.5 py-2 text-sm text-stone-900 placeholder-stone-400 resize-y bg-white transition-all',
+          'focus:outline-none focus:ring-2 focus:ring-black focus:border-transparent',
+          error ? 'border-rose-300 bg-rose-50/50' : 'border-stone-200 hover:border-stone-300',
           className
         )}
         rows={3}
         {...props}
       />
-      {error && <p className="text-xs text-red-500">{error}</p>}
+      {error && <p className="text-xs text-rose-500 font-medium">{error}</p>}
     </div>
   );
 };
@@ -190,17 +190,17 @@ interface BadgeProps {
 
 export const Badge: React.FC<BadgeProps> = ({ variant = 'blue', children, className }) => {
   const variants: Record<BadgeVariant, string> = {
-    blue: 'bg-blue-100 text-blue-700',
-    green: 'bg-emerald-100 text-emerald-700',
-    red: 'bg-red-100 text-red-700',
-    yellow: 'bg-amber-100 text-amber-700',
-    slate: 'bg-slate-100 text-slate-600',
-    purple: 'bg-purple-100 text-purple-700',
-    orange: 'bg-orange-100 text-orange-700',
+    blue: 'bg-sky-50 text-sky-700 border-sky-200/80',
+    green: 'bg-emerald-50 text-emerald-700 border-emerald-200/80',
+    red: 'bg-rose-50 text-rose-700 border-rose-200/80',
+    yellow: 'bg-amber-50 text-amber-700 border-amber-200/80',
+    slate: 'bg-stone-100 text-stone-700 border-stone-200/80',
+    purple: 'bg-purple-50 text-purple-700 border-purple-200/80',
+    orange: 'bg-orange-50 text-orange-700 border-orange-200/80',
   };
 
   return (
-    <span className={clsx('inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium', variants[variant], className)}>
+    <span className={clsx('inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border tracking-wide', variants[variant], className)}>
       {children}
     </span>
   );
@@ -217,7 +217,7 @@ interface CardProps {
 export const Card: React.FC<CardProps> = ({ children, className, padding = 'md', onClick }) => {
   const paddings = { none: '', sm: 'p-4', md: 'p-5', lg: 'p-6' };
   return (
-    <div className={clsx('bg-white rounded-xl border border-slate-200 shadow-sm', paddings[padding], className)} onClick={onClick}>
+    <div className={clsx('bg-white rounded-2xl border border-stone-200/90 shadow-xs', paddings[padding], className)} onClick={onClick}>
       {children}
     </div>
   );
@@ -228,7 +228,7 @@ export const Loader: React.FC<{ size?: 'sm' | 'md' | 'lg'; className?: string }>
   const sizes = { sm: 'w-4 h-4', md: 'w-6 h-6', lg: 'w-10 h-10' };
   return (
     <div className={clsx('flex items-center justify-center', className)}>
-      <Loader2 className={clsx(sizes[size], 'animate-spin text-blue-600')} />
+      <Loader2 className={clsx(sizes[size], 'animate-spin text-black')} />
     </div>
   );
 };
@@ -248,9 +248,9 @@ interface EmptyStateProps {
 
 export const EmptyState: React.FC<EmptyStateProps> = ({ icon, title, description, action }) => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
-    {icon && <div className="mb-3 text-slate-300">{icon}</div>}
-    <h3 className="text-sm font-semibold text-slate-700 mb-1">{title}</h3>
-    {description && <p className="text-sm text-slate-500 mb-4 max-w-xs">{description}</p>}
+    {icon && <div className="mb-3 text-stone-300">{icon}</div>}
+    <h3 className="text-sm font-bold text-stone-800 mb-1">{title}</h3>
+    {description && <p className="text-sm text-stone-500 mb-4 max-w-xs">{description}</p>}
     {action}
   </div>
 );
@@ -261,10 +261,10 @@ export const ErrorState: React.FC<{ message?: string; onRetry?: () => void }> = 
   onRetry,
 }) => (
   <div className="flex flex-col items-center justify-center py-12 text-center">
-    <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mb-3">
-      <span className="text-red-400 text-xl">!</span>
+    <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3 font-bold border border-rose-200/60">
+      !
     </div>
-    <p className="text-sm text-slate-600 mb-3">{message}</p>
+    <p className="text-sm text-stone-600 mb-3 font-medium">{message}</p>
     {onRetry && (
       <Button variant="outline" size="sm" onClick={onRetry}>Try again</Button>
     )}

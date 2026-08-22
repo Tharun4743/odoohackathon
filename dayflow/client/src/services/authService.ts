@@ -31,6 +31,16 @@ export const authService = {
     return res.data;
   },
 
+  async forgotPassword(email: string) {
+    const res = await api.post('/auth/forgot-password', { email });
+    return res.data;
+  },
+
+  async resetPassword(email: string, token: string, newPassword: string) {
+    const res = await api.post('/auth/reset-password', { email, token, newPassword });
+    return res.data;
+  },
+
   getStoredUser(): User | null {
     const stored = localStorage.getItem('dayflow_user');
     return stored ? JSON.parse(stored) : null;

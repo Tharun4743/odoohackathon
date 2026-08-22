@@ -125,7 +125,7 @@ export const employeeService = {
       }
 
       // Generate secure initial password
-      const initialPassword = data.initial_password?.trim() || `Dayflow@${Math.floor(1000 + Math.random() * 9000)}`;
+      const initialPassword = data.initial_password?.trim() || `WorkSuite@${Math.floor(1000 + Math.random() * 9000)}`;
       const passwordHash = await bcrypt.hash(initialPassword, 12);
       const role = data.role || 'EMPLOYEE';
 
@@ -181,7 +181,7 @@ export const employeeService = {
          VALUES ($1, $2, $3, 'SYSTEM')`,
         [
           user.id,
-          'Welcome to Dayflow HRMS!',
+          'Welcome to Work Suite HRMS!',
           'Your account has been created by HR. Please change your password on first login.',
         ]
       );
@@ -244,7 +244,7 @@ export const employeeService = {
   async uploadDocument(employeeId: string, file: Express.Multer.File, documentName: string, documentType: string) {
     const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: `dayflow/documents/${employeeId}`, resource_type: 'raw' },
+        { folder: `worksuite/documents/${employeeId}`, resource_type: 'auto' },
         (error, result) => {
           if (error) reject(error);
           else resolve(result as { secure_url: string; public_id: string });
@@ -276,14 +276,16 @@ export const employeeService = {
     );
     if (doc.rows.length === 0) throw new AppError('Document not found.', 404);
 
-    await cloudinary.uploader.destroy(doc.rows[0].public_id, { resource_type: 'raw' });
+    try {
+      await cloudinary.uploader.destroy(doc.rows[0].public_id, { resource_type: 'raw' });
+    } catch { /* ignore if already deleted on cloudinary */ }
     await query('DELETE FROM documents WHERE id = $1', [docId]);
   },
 
   async uploadProfileImage(employeeId: string, file: Express.Multer.File): Promise<string> {
     const uploadResult = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: `dayflow/profiles`, transformation: [{ width: 300, height: 300, crop: 'fill' }] },
+        { folder: `worksuite/profiles`, resource_type: 'image', transformation: [{ width: 300, height: 300, crop: 'fill' }] },
         (error, result) => {
           if (error) reject(error);
           else resolve(result as { secure_url: string; public_id: string });

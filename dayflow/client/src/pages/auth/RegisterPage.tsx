@@ -1,38 +1,39 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, ShieldAlert, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, ArrowLeft } from 'lucide-react';
 import { Button } from '../../components/ui';
+import logoImg from '../../assets/logo.png';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-blue-900 flex items-center justify-center p-8">
+    <div className="min-h-screen bg-[#F5F5F4] flex items-center justify-center p-8 font-sans">
       <div className="w-full max-w-md">
         <div className="flex items-center gap-3 mb-8 justify-center">
-          <div className="w-10 h-10 rounded-xl bg-blue-500 flex items-center justify-center">
-            <Building2 className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 rounded-2xl bg-white border border-stone-200 p-1 flex items-center justify-center shadow-xs overflow-hidden">
+            <img src={logoImg} alt="Work Suite Logo" className="w-full h-full object-contain" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white">Dayflow</h1>
-            <p className="text-xs text-slate-400">HRMS</p>
+            <h1 className="text-lg font-black text-stone-900 tracking-tight">Work Suite</h1>
+            <p className="text-xs text-stone-500 font-bold uppercase tracking-wider">HRMS Platform</p>
           </div>
         </div>
 
-        <div className="bg-white rounded-2xl shadow-2xl p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-8 h-8" />
+        <div className="bg-white rounded-3xl shadow-xl shadow-stone-200/50 p-8 text-center border border-stone-200/90">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/70 flex items-center justify-center mx-auto mb-4 shadow-xs">
+            <ShieldAlert className="w-7 h-7" />
           </div>
 
-          <h2 className="text-xl font-bold text-slate-800 mb-2">Self-Registration Disabled</h2>
-          <p className="text-slate-600 text-sm mb-6 leading-relaxed">
-            Per company security policy, employee accounts and IDs are created directly by HR Officers & Administrators.
-            Please contact your HR administrator to obtain your login credentials.
+          <h2 className="text-xl font-black text-stone-900 mb-2 tracking-tight">Self-Registration Disabled</h2>
+          <p className="text-stone-600 text-xs font-medium mb-6 leading-relaxed">
+            Per company security policy, employee accounts and IDs are provisioned exclusively by HR Officers and Administrators.
+            Please contact your HR administrator to receive your credentials.
           </p>
 
           <Button
             variant="primary"
-            className="w-full"
+            className="w-full py-2.5"
             leftIcon={<ArrowLeft className="w-4 h-4" />}
             onClick={() => navigate('/login')}
           >

@@ -37,6 +37,8 @@ CREATE TABLE IF NOT EXISTS users (
     role user_role NOT NULL DEFAULT 'EMPLOYEE',
     is_verified BOOLEAN DEFAULT TRUE,
     must_change_password BOOLEAN DEFAULT FALSE,
+    reset_token VARCHAR(255),
+    reset_token_expires_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
