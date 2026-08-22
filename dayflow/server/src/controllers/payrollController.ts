@@ -19,11 +19,16 @@ export const payrollController = {
   async getMyPayroll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
       const employee = await employeeService.getByUserId(req.user!.userId);
-      const { page, limit } = req.query;
+      const { pay_period, sortBy, sortOrder, page, limit } = req.query;
       const result = await payrollService.getMyPayroll(
         employee.id as string,
-        qsNum(page),
-        qsNum(limit),
+        {
+          pay_period: qs(pay_period),
+          sortBy: qs(sortBy),
+          sortOrder: qs(sortOrder),
+          page: qsNum(page),
+          limit: qsNum(limit),
+        }
       );
       res.json({ success: true, data: result });
     } catch (err) {
@@ -33,10 +38,12 @@ export const payrollController = {
 
   async getAllPayroll(req: AuthRequest, res: Response, next: NextFunction) {
     try {
-      const { employeeId, pay_period, page, limit } = req.query;
+      const { employeeId, pay_period, sortBy, sortOrder, page, limit } = req.query;
       const result = await payrollService.getAllPayroll({
         employeeId: qs(employeeId),
         pay_period: qs(pay_period),
+        sortBy: qs(sortBy),
+        sortOrder: qs(sortOrder),
         page: qsNum(page),
         limit: qsNum(limit),
       });

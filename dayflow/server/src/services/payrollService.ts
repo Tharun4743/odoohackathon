@@ -216,20 +216,42 @@ export const payrollService = {
     return result.rows[0];
   },
 
-  async getMyPayroll(employeeId: string, page = 1, limit = 12) {
+  async getMyPayroll(employeeId: string, options?: { pay_period?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) {
+    const { pay_period, sortBy = 'pay_period', sortOrder = 'DESC', page = 1, limit = 20 } = options || {};
     const offset = (page - 1) * limit;
+    const conditions = ['p.employee_id = $1'];
+    const params: unknown[] = [employeeId];
+    let idx = 2;
+
+    if (pay_period) {
+      conditions.push(`p.pay_period = $${idx++}`);
+      params.push(pay_period);
+    }
+
+    const where = `WHERE ${conditions.join(' AND ')}`;
     const countResult = await query(
-      'SELECT COUNT(*) FROM payroll WHERE employee_id = $1',
-      [employeeId]
+      `SELECT COUNT(*) FROM payroll p ${where}`,
+      params
     );
+
+    const validSortCols: Record<string, string> = {
+      pay_period: 'p.pay_period',
+      net_salary: 'p.net_salary',
+      gross_salary: 'p.gross_salary',
+      payable_days: 'p.payable_days',
+      created_at: 'p.created_at',
+    };
+    const sortCol = validSortCols[sortBy] || 'p.pay_period';
+    const order = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
     const result = await query(
       `SELECT p.*, ss.basic_salary, ss.allowances, ss.deductions as salary_deductions, ss.effective_from
        FROM payroll p
        JOIN salary_structures ss ON ss.id = p.salary_structure_id
-       WHERE p.employee_id = $1
-       ORDER BY p.pay_period DESC
-       LIMIT $2 OFFSET $3`,
-      [employeeId, limit, offset]
+       ${where}
+       ORDER BY ${sortCol} ${order}
+       LIMIT $${idx++} OFFSET $${idx++}`,
+      [...params, limit, offset]
     );
     return {
       payroll: result.rows,
@@ -240,8 +262,8 @@ export const payrollService = {
     };
   },
 
-  async getAllPayroll(filters: { employeeId?: string; pay_period?: string; page?: number; limit?: number }) {
-    const { employeeId, pay_period, page = 1, limit = 20 } = filters;
+  async getAllPayroll(filters: { employeeId?: string; pay_period?: string; sortBy?: string; sortOrder?: string; page?: number; limit?: number }) {
+    const { employeeId, pay_period, sortBy = 'pay_period', sortOrder = 'DESC', page = 1, limit = 50 } = filters;
     const offset = (page - 1) * limit;
     const conditions: string[] = [];
     const params: unknown[] = [];
@@ -253,6 +275,16 @@ export const payrollService = {
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
     const countResult = await query(`SELECT COUNT(*) FROM payroll p ${where}`, params);
 
+    const validSortCols: Record<string, string> = {
+      pay_period: 'p.pay_period',
+      net_salary: 'p.net_salary',
+      gross_salary: 'p.gross_salary',
+      payable_days: 'p.payable_days',
+      name: 'e.first_name',
+    };
+    const sortCol = validSortCols[sortBy] || 'p.pay_period';
+    const order = sortOrder?.toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
     const result = await query(
       `SELECT p.*, e.first_name, e.last_name, e.employee_code, d.name as department_name,
               ss.basic_salary, ss.allowances
@@ -261,7 +293,7 @@ export const payrollService = {
        LEFT JOIN departments d ON d.id = e.department_id
        JOIN salary_structures ss ON ss.id = p.salary_structure_id
        ${where}
-       ORDER BY p.pay_period DESC, e.first_name ASC
+       ORDER BY ${sortCol} ${order}, e.first_name ASC
        LIMIT $${idx} OFFSET $${idx + 1}`,
       [...params, limit, offset]
     );
