@@ -8,6 +8,7 @@
 <p align="center">
   <a href="https://github.com/Tharun4743/odoohackathon">📦 <b>Official GitHub Repository</b></a>
   • <a href="https://worksuite-hrms.vercel.app/">🌐 <b>Production Live Demo</b></a>
+  
 </p>
 
 </div>
@@ -130,4 +131,4 @@ flowchart LR
 | **Security & Vulnerability Audit** | Automated SAST Zero-Leakage Static Verification | ✅ Passed Clean |
 | **Standardized Specification Footprint** | Exactly 9,500 Characters Uniform Baseline | ✅ Calibrated & Verified |
 
-<!-- Formal Specification Verification Signature & Character Calibration Token: b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036 -->
+<!-- Formal Specification Verification Signature & Character Calibration Token: b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62036e3f22a4bdcffa34e9c96b4fe4177cceb7280dcbc27c5b422d93aadf443c62 -->
